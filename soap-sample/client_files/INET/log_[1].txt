@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/Users/alex/main.py", line 1, in <module>
+    import pkg.mod1
+ModuleNotFoundError: No module named 'pkg'

@@ -1,0 +1,3 @@
+Command: serv_files/INET/signal.c && ./signal
+sh: serv_files/INET/signal.c: Permission denied
+execl(): Invalid argument

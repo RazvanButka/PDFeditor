@@ -1,0 +1,13 @@
+Nu exista fisiere pe server-ul INET!ierul ./serv_files/INET/Tema\]
+		==============================================================================================================================================
+42628331 -rwxr--r--  1 alex  staff  12 Jun 13 14:55 ./serv_files/INET/Tema
+
+		[Informatii legate de continuturile din iNOD pentru fisierul ./serv_files/INET/Tema\]
+		===================================================================================================================================================================
+st_dev=16777230 st_ino=42628331 st_mode=0100744 st_nlink=1 st_uid=501 st_gid=20 st_rdev=0 st_size=12 st_atime=1655121338 st_mtime=1655121303 st_ctime=1655124657 st_birthtime=1655121303 st_blksize=4096 st_blocks=8 st_flags=0
+
+		[Continutul fisierului ./serv_files/INET/Tema\]
+		=============================================================================================================================
+     1	9/t09l10_2.c
+==================================================
+

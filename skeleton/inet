@@ -1,0 +1,281 @@
+#include <pthread.h>
+#include <stdio.h>
+#include <ncurses.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+
+/*
+extern WINDOW * mainwnd ;
+WINDOW *inetwnd ;
+extern pthread_mutex_t curmtx ;
+*/
+
+char *OPERATIONS [] = {
+  "echo", 
+  "concat", 
+  "adder", 
+  "bye"
+} ;
+#define OPR_ECHO 0 
+#define OPR_CONC 1 
+#define OPR_ADD  2 
+#define OPR_BYE  3 
+
+int inet_socket (uint16_t port, short reuse) {
+  int sock;
+  struct sockaddr_in name;
+  
+  /* Create the socket. */
+  sock = socket (PF_INET, SOCK_STREAM, 0);
+  if (sock < 0) {
+//    perror ("socket");
+    pthread_exit (NULL);
+  }
+  
+  if (reuse) {
+      int reuseAddrON = 1;
+      if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseAddrON, sizeof(reuseAddrON)) < 0) {
+//          perror("setsockopt(SO_REUSEADDR) failed");
+        }
+    }
+
+  /* Give the socket a name. */
+  name.sin_family = AF_INET; 
+  name.sin_port = htons (port);
+  name.sin_addr.s_addr = htonl (INADDR_ANY);
+  if (bind (sock, (struct sockaddr *) &name, sizeof (name)) < 0) {
+//    perror ("bind");
+    pthread_exit (NULL);
+  }
+  
+  return sock;
+}
+
+long get_client_id (int sock) {
+  int size ;
+  long clientid ;
+  size = recv (sock, &clientid, sizeof (clientid), 0) ;
+  fprintf (stderr, "gcid:\tReceived %ld\n", clientid) ;
+
+  if (size == -1) return -1 ;
+
+  return clientid ;
+}
+
+int write_client_int (int sock, long id) {
+  /* DUMMY FUNCTION FOR SENDING CLIENT ID */
+  int size ;
+  fprintf (stderr, "wcl:\tWriting %ld\n", id) ;
+  if ((size = send (sock, &id, sizeof (id), 0)) < 0) return -1 ;
+  return EXIT_SUCCESS ;
+}
+
+int write_client_id (int sock, long id) {
+  return write_client_int (sock, id) ;
+}
+
+int write_client_concat (int sock, char *o1, char *o2) {
+  /* DUMMY IMPLEMENTATION OF CONCATENATE FUNCTION  */
+  int size, bsize, returnStatus=EXIT_SUCCESS ;
+  char *b ;
+  bsize = strlen (o1) + strlen (o2)+2 ;
+  b = malloc (bsize) ;
+  sprintf (b, "%s %s", o2, o1) ; b [bsize] = 0 ;
+  /* New version ==> add a small header (sizeof only)
+    Now the protocol is: send size, followed by content!
+   */
+  write_client_int (sock, (long)bsize); 
+  if ((size = send (sock, b, bsize, 0)) < 0) 
+  returnStatus = -1 ;
+
+  free (b) ;
+
+  return returnStatus ;
+}
+
+char *get_client_str (int sock,  int *dsize) {
+  /* DUMMY FUNCTION FOR GETTING CLIENT DATA
+	Notice that FULL CLIENT DATA could come: e.g
+	OPERATION^@DATA1^@DATA2^@ */
+  char buffer[256] ;
+  char *result = NULL;
+  int isize = 0, size, i = 0 ; 
+  while (((size = recv (sock, &buffer, *dsize, 0)) >= 0) ) {
+    result = realloc (result, isize+size) ; 
+fprintf (stderr, "\t\t[%s]\n", buffer);
+    memcpy (result+isize, buffer, size) ; i++ ; 
+    isize += size ; result [isize] = 0; 
+    if (size != 256) break ;
+  }
+fprintf (stderr, "gcs:\tGot %s\n", result) ;
+  if (isize < 0) return NULL ;
+  *dsize = isize ;
+  /* Notice: use smarter mem allocation here ;) */
+  return result ;
+}
+
+long create_client_id () {
+  /* Create some unique ID. e.g. UNIX timestamp... */
+  char ctsmp [12] ;  
+  time_t rawtime;
+  struct tm * timeinfo;
+  long uuid ; 
+  
+  time ( &rawtime );
+  timeinfo = localtime ( &rawtime );
+
+  strftime (ctsmp, 12, "%s", timeinfo) ;
+
+  uuid = atol (ctsmp) ;
+  /* NOTICE: YOU NEED TO STORE THIS INFORMATION AT SERVER LEVEL !*/
+  return uuid ;
+}
+
+int extract_client_operation (char *data) {
+  int i ;
+  char *clientcmd  ;
+  clientcmd = data ;
+
+  for (i = 0; i < 4; i++) {
+  int sz = sizeof(OPERATIONS[i]);
+    if (strncasecmp (clientcmd, OPERATIONS[i], sz) == 0) {
+      return i ;
+    }
+  }
+  return -1 ;
+}
+
+/*
+void closewin (WINDOW *wnd) {
+  if (wnd != NULL) delwin (wnd) ;
+  wnd = NULL ;
+  refresh () ;
+}
+*/
+
+void *inet_main (void *args) {
+  int port = *((int *)args) ;
+  int sock ;
+  size_t size;
+  fd_set active_fd_set, read_fd_set;
+  struct sockaddr_in clientname;
+
+
+  if ((sock = inet_socket (port, 1)) < 0) {
+    pthread_exit (NULL);
+  }
+  if (listen (sock, 1) < 0) {
+    pthread_exit (NULL);
+  }  
+  /* Initialize the set of active sockets. */
+  FD_ZERO (&active_fd_set);
+  FD_SET (sock, &active_fd_set);
+  
+  while (1) {
+    int i ;
+    /* Block until input arrives on one or more active sockets. */
+    read_fd_set = active_fd_set;
+    if (select (FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {
+      pthread_exit (NULL);
+    }
+    
+    /* Service all the sockets with input pending. */
+    for (i = 0; i < FD_SETSIZE; ++i)
+      if (FD_ISSET (i, &read_fd_set)) {
+	if (i == sock) { /* Connection request on original socket. */
+	  int new;
+	  size = sizeof (clientname);
+	  new = accept (sock, (struct sockaddr *) &clientname,
+			(socklen_t *) &size);
+	  if (new < 0) {
+            pthread_exit (NULL);
+	  }
+
+	  FD_SET (new, &active_fd_set);
+	}
+	else { /* Data arriving on an already-connected socket. */
+          int clientID ;
+	  /* Protocolul simplu utilizat:
+		Primul mesaj: '0 (getid)' -- obtine un ID unic pentru client: ex. utilizeaza biblioteca UUID; Raspuns: userid
+			'userid' -- urmeaza o operatie -- vezi mai jos
+		Operatii: 'echo', urmata de un mesaj care contine mesajul; Raspuns: mesajul initial + sirul 'echo'
+			'concat', urmata de doua mesaje care contin componentele; Raspuns: concatenare componente
+			'adder', urmata de doua mesaje care contin numerele; Raspuns: numar (suma componentelor)
+			'bye', utilizabila pentru a termina comunicarea cu serverul */
+ 	  if ((clientID = get_client_id (i)) < 0) {
+             // Protocol error: missing client ID. Close connection
+             close (i); FD_CLR (i, &active_fd_set);
+          } else {
+            if (clientID == 0) {
+               long newID ; 
+               newID = create_client_id () ;
+               if (write_client_id (i, newID) < 0) {
+                 // Cannot write to client. Close connection!
+                 close (i) ; FD_CLR (i, &active_fd_set) ;
+               } 
+            } else { /* Already identified. Existing client... communication continues */
+              /* YOU SHOULD CHECK IF THIS IS AN EXISTING CLIENT !!! */
+              int operation, dsize ;
+              char *opr1, *opr2;
+              int num1, num2 ;
+              char *opr ;
+              dsize = get_client_id (i) ;
+fprintf(stderr, "\tSize: %d\n", dsize) ;
+              opr = get_client_str (i, &dsize) ; // GET FULL CLIENT STRING
+              
+              operation = extract_client_operation (opr) ;
+              if (operation == -1) { // Protocol error: missing or incorect operation
+                 close (i); FD_CLR (i, &active_fd_set);
+              }
+
+              switch (operation) {
+                 case OPR_ECHO: 
+                      opr1 = opr + strlen (opr) + 1 ;
+                      if (write_client_concat (i, ": echo", opr1) < 0) {
+                        // Cannot write to client. Close connection!
+                        close (i) ; FD_CLR (i, &active_fd_set) ;
+                      } 
+                      break ;
+                 case OPR_CONC: 
+                      opr1 = opr + strlen (opr) + 1 ;
+
+                      opr2 = opr1 + strlen (opr1) + 1 ;
+
+                      if (write_client_concat (i, opr1, opr2) < 0) {
+                        // Cannot write to client. Close connection!
+                        close (i) ; FD_CLR (i, &active_fd_set) ;
+                      } 
+// FREE opr, opr1, opr2 !!!
+                      break ;
+                 case OPR_ADD: 
+                      num1 = *(int *)(opr + strlen(opr)+1) ;
+
+                      num2 = *(int *)(opr + strlen(opr)+1+sizeof(int *)) ;
+
+		      if (write_client_int (i, num1 + num2) < 0)  {
+                        // Cannot write to client. Close connection!
+
+                        close (i) ; FD_CLR (i, &active_fd_set) ;
+
+                      } 
+                      break ;
+                 case OPR_BYE: 
+                      close (i) ; FD_CLR (i, &active_fd_set) ; 
+                      break ;
+              } 
+            }
+          }
+	}
+      }
+  }
+
+  pthread_exit (NULL) ;
+}
+

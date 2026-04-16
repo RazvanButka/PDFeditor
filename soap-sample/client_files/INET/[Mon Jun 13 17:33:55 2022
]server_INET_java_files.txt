@@ -1,0 +1,3 @@
+42630458 -rwx------  1 alex  staff  0 Jun 13 15:42 ./serv_files/INET/filename_de_test_1.java
+42630476 -rwx------  1 alex  staff  0 Jun 13 15:43 ./serv_files/INET/fisier_alt_test.java
+42630753 -rwx------  1 alex  staff  0 Jun 13 15:47 ./serv_files/INET/test_de_java.java

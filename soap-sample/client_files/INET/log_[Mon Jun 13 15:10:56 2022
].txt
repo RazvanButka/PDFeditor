@@ -1,0 +1,4 @@
+Command: gcc -o t07l08 serv_files/INET/t07l08.c && ./t07l08
+Waiting for SIGUSR2...
+Loop
+Got signal: User defined signal 2: 31

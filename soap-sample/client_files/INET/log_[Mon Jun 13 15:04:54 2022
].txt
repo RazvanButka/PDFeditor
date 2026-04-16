@@ -1,0 +1,8 @@
+Command: gcc -o t08l09_1 serv_files/INET/t08l09_1.c && ./t08l09_1
+Creating 6 threads
+este inca o zi
+pierduta
+pe bancile
+statului
+este inca o zi
+pierduta

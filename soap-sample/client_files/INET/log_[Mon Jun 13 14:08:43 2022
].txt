@@ -1,0 +1,4 @@
+Command: gcc -o thread_race serv_files/INET/thread_race.c && ./thread_race
+Usage: ./thread_race loopNo
+execl(): Invalid argument
+PX@

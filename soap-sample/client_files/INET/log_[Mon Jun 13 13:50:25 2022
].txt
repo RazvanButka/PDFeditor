@@ -1,0 +1,2 @@
+Command: serv_files/INET/signal serv_files/INET/signal.c
+clang: error: no input files

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SOAP Client</title>
+    <link rel="stylesheet" type="text/css" href="assets/style.css"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="scripts/operations.js"></script>
+    <!--<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
+   -->
+    <!-- Bootstrap CSS -->
+    <link href=
+                  "https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css"
+          rel="stylesheet" integrity=
+                  "sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU"
+          crossorigin="anonymous" />
+    <script src=”https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js” integrity=”sha384-/bQdsTh/da6pkI1MST/rWKFNjaCP5gBSY4sEBT38Q/9RBh9AH40zEOg7Hlq2THRZ” crossorigin=”anonymous”></script>
+    <script src="scripts/events.js"></script>
+    <!-- JavaScript Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg bg-black">
+    <div class="container-fluid">
+        <a class="navbar-brand">SOAP UI Client</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarText">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="#">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Componenta WebServices</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">PCD 2022</a>
+                </li>
+            </ul>
+            <span class="navbar-text">
+        Navbar text with an inline element
+      </span>
+        </div>
+    </div>
+</nav>
+<h2>Optiuni</h2>
+<div class="p-3 mb-2 bg-primary text-white"><h3>1. Transfera fisiere (accesibila din SOAPUI!) </h3></div>
+<div class="p-3 mb-2 bg-primary text-white"><h3>2. Afiseaza fisierele de la nivel de client SOAP</h3></div>
+<div class="p-3 mb-2 bg-primary text-white"><h3>3. Creeaza un fisier pe server </h3> <input type="text" id="creat_file" name="creat_file" value="Denumirea fisierului..."/></div>
+<div class="p-3 mb-2 bg-danger text-white"><h3>4. Determina fisierele scrise intr-un anumit limbaj de programare, la nivel de server SOAP</h3> <select name="prog_lang_opt" id="prog_lang_opt"><option>py</option><option>c</option><option>cpp</option><option>java</option></select></div>
+<div class="p-3 mb-2 bg-danger text-white"><h3>5. Realizeaza o statistica privind numar fisiere -- limbaj de programare</h3></div>
+<div class="p-3 mb-2 bg-warning text-white"><h3>6. Afiseaza informatii legate de cel mai mare fisier de pe server-ul SOAP</h3></div>
+<div class="p-3 mb-2 bg-warning text-white"><h3>7. Modifica denumirea unui fisier existent pe server</h3><input type="text" id="fname" name="fname" value="Denumire fisier existent..."/><input type="text" name="newfname" id="newfname" value="Denumirea modificata..."/></div>
+<div class="p-3 mb-2 bg-warning text-white"><h3>8. Sterge un fisier existent de pe server</h3><input type="text" id="delfile" name="delfile" value="Denumirea fisierului..."/></div>
+<div class="p-3 mb-2 bg-success text-white"><h3>9. Afiseaza informatii legate de toate fisierele existente pe server</h3></div>
+<div class="p-3 mb-2 bg-success text-white"><h3>10. Afiseaza informatii legate de cel mai mic fisier de pe server</h3></div>
+<div class="p-3 mb-2 bg-success text-white"><h3>11. Afiseaza marimea totala (in GB) a fisierelor de pe server</h3></div>
+
+
+<select id="opt">
+<!--    <option value="1">1</option>
+    <option value="2">2</option> -->
+    <option>3</option>
+    <option>4</option>
+   <!-- <option>5</option> -->
+    <option>6</option>
+    <option>7</option>
+    <option>8</option>
+   <!-- <option>9</option> -->
+    <!--<option>10</option>-->
+    <option>11</option>
+</select>
+
+
+<button class="btn btn-outline-danger" id="selecteaza_opt" name="selecteaza_opt" class="button button-outline" onclick="selecteazaopt()">Selectati optiunea...</button>
+<!--<textarea readonly="true" id="info"> -->
+</textarea>
+</body>
+</html>

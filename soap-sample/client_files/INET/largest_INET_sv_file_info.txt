@@ -1,0 +1,284 @@
+		[Informatii generale legate de fisierul ./serv_files/INET/t08l09_1.c]
+		==============================================================================================================================================
+42628660 -rwxr--r--  1 alex  staff  9667 Jun 13 15:04 ./serv_files/INET/t08l09_1.c
+
+		[Informatii legate de continuturile din iNOD pentru fisierul ./serv_files/INET/t08l09_1.c]
+		===================================================================================================================================================================
+st_dev=16777230 st_ino=42628660 st_mode=0100744 st_nlink=1 st_uid=501 st_gid=20 st_rdev=0 st_size=9667 st_atime=1655122030 st_mtime=1655121894 st_ctime=1655124657 st_birthtime=1655121771 st_blksize=4096 st_blocks=24 st_flags=0
+
+		[Continutul fisierului ./serv_files/INET/t08l09_1.c]
+		=============================================================================================================================
+     1	/**
+     2	Lab. 09 Tema 08
+     3	Titlul temei: Sincronizarea thread-urilor pe variabile de condiție
+     4	Data livrarii: 19 Apr. 2022
+     5	Student: Botescu Mihai-Alexandru
+     6	An 3 IA, Sg1
+     7	----------
+     8	<
+     9	Programul a fost rulat sub macOS versiunea 12.0
+    10	Informatii suplimentare:
+    11	BuildVersion:   21A5552a
+    12	Am considerat ca este nevoie de o serie de functii auxiliare, cum ar fi:
+
+    13	--> cate una pentru fiecare situatie a problemei in parte
+    14	    -- daca am numar par de thread-uri, se afiseaza niste mesaje tip text
+    15	    -- daca am numar impar de thread-uri, se afiseaza pur si simplu o variabila simpla incrementata la fiecare pas
+    16	--> cate o functie handlera pentru thread-uri pentru fiecare din cele 2 situatii de mai sus
+    17	--> o functie ajutatoare pentru parsarea argumentelor de pe linia de c-da.
+
+    18	Codul este rulat in main.
+
+
+    19	Functionalitatea programului este urmatoarea:
+    20	Se creeaza (functie de valoarea argumentului primit pe linia de c-da),
+    21	un numar de thread-uri. In functie de acest lucru, se va intra sau pe
+    22	primul caz (afisarea unor mesaje text) sau pe al doilea (afisarea si
+    23	incrementarea unei variabile simple).
+    24	Este verificat numarul de argumente, corectitudinea transmiterii optiunii
+    25	si valorii acesteia, precum si esecul apelurilor sistem.
+    26	In cazul in care nu sunt indeplinite conditiile de mai sus (exceptie nr de argumente)
+    27	,programul incheie prematur executia cu un cod ce semnifica eroare (EXIT_FAILURE).
+    28	Daca numarul de argumente este prea mic, se va folosi o valoare default pt nr de
+    29	thread-uri.
+    30	>
+    31	**/
+
+    32	#include <pthread.h>
+    33	#include <stdio.h>
+    34	#include <stdlib.h>
+    35	#include <string.h>
+    36	#include <getopt.h>
+
+    37	/* the default threads number, in case of not providing the argument on the CLI. */
+    38	#define DEFAULT_THREAD_NO 6
+
+    39	/* the condition variable. */
+    40	static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
+    41	/* the mutex lock we're going to use. */
+    42	static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
+
+
+    43	/* the messages we're going to print. */
+    44	static const char *messages[] = {
+    45	        "este inca o zi",
+    46	        "pierduta",
+    47	        "pe bancile",
+    48	        "statului"
+    49	};
+
+    50	/* a variable for accessing the current message. */
+    51	static volatile sig_atomic_t idx;
+
+    52	/* first kind of thread's function. */
+    53	void *tfunc1(void *targ) {
+    54	    /* acquire the mutex lock. */
+    55	    if (pthread_mutex_lock(&mtx)) { /* in case of error, exit. */
+    56	        fprintf(stderr, "Error acquiring a mutex lock on the thread!\n");
+    57	        perror("pthread_mutex_lock");
+    58	        exit(EXIT_FAILURE);
+    59	    }
+    60	    /* critical section begins here. */
+    61	    /* check the index of the message. */
+    62	    switch (idx % 2) {
+    63	        case 0: /* if it's odd, then print it, raise the index, and do the following. */
+    64	            fprintf(stdout, "%s\n", messages[idx]);
+    65	            idx++;
+    66	            /* wait on the condition variable. */
+    67	            /* in case of error, exit. */
+    68	            if (pthread_cond_wait(&cond, &mtx)) {
+    69	                fprintf(stderr, "Error waiting on the condition variable on the thread!\n");
+    70	                perror("pthread_cond_wait");
+    71	                exit(EXIT_FAILURE);
+    72	            }
+    73	            break; /* exit. */
+    74	        case 1: /* in other cases, signal the condition variable. */
+    75	            if (pthread_cond_signal(&cond)) { /* in case of error, exit. */
+    76	                fprintf(stderr, "Error signaling on the condition variable on the thread!\n");
+    77	                perror("pthread_cond_signal");
+    78	                exit(EXIT_FAILURE);
+    79	            }
+    80	            fprintf(stdout, "%s\n", messages[idx]); /* print the current message. */
+    81	            /* if we reached the end of the messages array, reset the index and start from scratch. */
+    82	            idx = (idx == sizeof(messages) / sizeof(char *) - 1) ? 0 : idx + 1;
+    83	            break; /* exit. */
+    84	    }
+    85	    /* unlock the mutex. */
+
+    86	    if (pthread_mutex_unlock(&mtx)) {  /* in case of error, exit. */
+    87	        fprintf(stderr, "Error releasing the mutex lock on the thread!\n");
+    88	        perror("pthread_mutex_unlock");
+    89	        exit(EXIT_FAILURE);
+    90	    }
+
+    91	    /* return something, because the return type is void*. */
+    92	    return targ ? targ : NULL;
+    93	}
+
+
+    94	/* the demo variable used. */
+    95	static volatile int global = 1;
+
+    96	/* handler for the second kind of threads. */
+    97	void *tfunc2(void *targ) {
+    98	    /* acquire the mutex lock. */
+    99	    if (pthread_mutex_lock(&mtx)) {
+   100	        fprintf(stderr, "Error acquiring a mutex lock on the thread!\n");
+   101	        perror("pthread_mutex_lock");
+   102	        exit(EXIT_FAILURE);
+   103	    }
+   104	    /* critical section begins here. */
+   105	    /* check the variable. */
+   106	    if (global % 2 == 0) { /* if it's odd, wait on the cond variable. */
+   107	        fprintf(stdout, "[%d]\tglobal=%d\n", global, global); /* print it's value. */
+   108	        global++; /* move on with the variable. */
+   109	        if (pthread_cond_wait(&cond, &mtx)) { /* in case of error, exit. */
+   110	            fprintf(stderr, "Error waiting on the condition variable on the thread!\n");
+   111	            perror("pthread_cond_wait");
+   112	            exit(EXIT_FAILURE);
+   113	        }
+   114	    } else if (global % 2 == 1) {/* in other cases, signal the condition variable. */
+   115	        if (pthread_cond_signal(&cond)) {/* in case of error, exit. */
+   116	            fprintf(stderr, "Error signaling on the condition variable on the thread!\n");
+   117	            perror("pthread_cond_signal");
+   118	            exit(EXIT_FAILURE);
+   119	        }
+   120	        fprintf(stdout, "[%d]\tglobal=%d\n", global, global); /* print the variable. */
+   121	    }
+   122	    global++; /* move on to the next value. */
+   123	    /* critical section ends here. */
+   124	    /* unlock the mutex. */
+   125	    if (pthread_mutex_unlock(&mtx)) {/* in case of error, exit. */
+   126	        fprintf(stderr, "Error releasing the mutex lock on the thread!\n");
+   127	        perror("pthread_mutex_unlock");
+   128	        exit(EXIT_FAILURE);
+   129	    }
+   130	    /* return something, because the return type is void*. */
+   131	    return !targ ? NULL : targ;
+   132	}
+
+   133	/* helper function to parse the CLI arguments options. */
+   134	char *getarg(int argc, char *const argv[]) {
+   135	    char c;
+   136	    int opt;
+   137	    /* find the -t option. */
+   138	    while ((opt = getopt(argc, argv, "t:")) != -1) {
+   139	        switch (opt) {
+   140	            case 't':
+   141	                return optarg; /* if found, return it's mapped value. */
+   142	                break;
+   143	        }
+   144	    }
+   145	    return NULL; /* if not found, do not return anything. Or return NULL :) */
+   146	}
+
+
+   147	/* helper function for the first case, odd number of threads. */
+   148	static void runA(pthread_t *tid, long loops) {
+   149	    int i;
+   150	    for (i = 0; i < loops; i++) { /* create the threads. indicate, for each one, the handler function. */
+   151	        if (pthread_create(&tid[i], NULL, tfunc1, NULL)) {/* in case of error, exit. */
+   152	            fprintf(stderr, "Error during creating thread [%d]!\n", i + 1);
+   153	            perror("pthread_create");
+   154	            exit(EXIT_FAILURE);
+   155	        }
+   156	    }
+   157	    /* wait for the threads to finish. */
+   158	    for (i = 0; i < loops; i++) {
+   159	        if (pthread_join(tid[i], NULL)) {/* in case of error, exit. */
+   160	            fprintf(stderr, "Error during joining thread [%d]!\n", i + 1);
+   161	            perror("pthread_join");
+   162	            exit(EXIT_FAILURE);
+   163	        }
+   164	    }
+   165	}
+
+   166	/* helper function for the second case, even number of threads. */
+   167	static void runB(pthread_t *tid, long loops) {
+   168	    int i;
+   169	    for (i = 0; i < loops; i++) {
+   170	        if (pthread_create(&tid[i], NULL, tfunc2,
+   171	                           NULL)) { /* create the threads. indicate, for each one, the handler function. */
+   172	            fprintf(stderr, "Error during creating thread [%d]!\n", i + 1); /* in case of error, exit. */
+   173	            perror("pthread_create");
+   174	            exit(EXIT_FAILURE);
+   175	        }
+   176	    }
+   177	    /* wait for the threads to finish. */
+   178	    for (i = 0; i < loops; i++) {
+   179	        if (pthread_join(tid[i], NULL)) { /* in case of error, exit. */
+   180	            fprintf(stderr, "Error during joining thread [%d]!\n", i + 1);
+   181	            perror("pthread_join");
+   182	            exit(EXIT_FAILURE);
+   183	        }
+   184	    }
+   185	}
+
+   186	/* main function. */
+   187	int main(int argc, char *const argv[]) {
+   188	    /* get the thread no from the CLI, or use the default THREAD_NO. */
+   189	    long loops = (argc > 2) ? strtol(getarg(argc, argv), NULL, 10) : DEFAULT_THREAD_NO;
+   190	    /* check if loops were converted successfully to numeric data. */
+   191	    if (loops <= 0) {/* in case of error, exit. */
+   192	        fprintf(stderr, "Error on converting argument to numeric data!\n");
+   193	        perror("strtol");
+   194	        exit(EXIT_FAILURE);
+   195	    }
+
+   196	    /* creating how many threads? */
+   197	    fprintf(stdout, "Creating %ld threads\n", loops);
+
+   198	    /* declare and malloc the thread pool. */
+   199	    pthread_t *tid = (pthread_t *) malloc(loops * sizeof(pthread_t));
+   200	    if (!tid) { /* in case of error, exit. */
+   201	        fprintf(stderr, "Error malloc!\n");
+   202	        perror("malloc");
+   203	        exit(EXIT_FAILURE);
+   204	    }
+   205	    switch (loops % 2) { /* the number of threads. */
+   206	        case 0:
+   207	            runA(tid, loops);
+   208	            break;
+   209	        case 1:
+   210	            runB(tid, loops);
+   211	            break;
+   212	    }
+   213	    /* if no errors occured, exit success. */
+   214	    exit(EXIT_SUCCESS);
+   215	}
+   216	/** Exemple de compilare si executie ale programului.
+   217	* gcc -o t08l09_1{,.c} && ./t08l09_1 -t 5                                    
+   218	Creating 5 threads
+   219	[1]     global=1
+   220	[2]     global=2
+   221	[3]     global=3
+   222	[4]     global=4
+   223	[5]     global=5
+
+   224	* gcc -o t08l09_1{,.c} && ./t08l09_1 -t 4                                    
+   225	Creating 4 threads
+   226	este inca o zi
+   227	pierduta
+   228	pe bancile
+   229	statului
+
+
+   230	 gcc -o t08l09_1{,.c} && ./t08l09_1                                         
+   231	Creating 6 threads
+   232	este inca o zi
+   233	pierduta
+   234	pe bancile
+   235	statului
+   236	este inca o zi
+   237	pierduta
+
+
+   238	* gcc -o t08l09_1{,.c} && ./t08l09_1 -t anamaria                             
+   239	Error on converting argument to numeric data!
+   240	strtol: Invalid argument
+
+
+
+
+   241	*/

@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions name="SampleServices"
+  targetNamespace="http://tempuri.org/ns.xsd/SampleServices.wsdl"
+  xmlns:tns="http://tempuri.org/ns.xsd/SampleServices.wsdl"
+  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:ns="http://tempuri.org/ns.xsd"
+  xmlns:SOAP="http://schemas.xmlsoap.org/wsdl/soap/"
+  xmlns:HTTP="http://schemas.xmlsoap.org/wsdl/http/"
+  xmlns:MIME="http://schemas.xmlsoap.org/wsdl/mime/"
+  xmlns:DIME="http://schemas.xmlsoap.org/ws/2002/04/dime/wsdl/"
+  xmlns:WSDL="http://schemas.xmlsoap.org/wsdl/"
+  xmlns="http://schemas.xmlsoap.org/wsdl/">
+
+<types>
+
+  <schema targetNamespace="http://tempuri.org/ns.xsd"
+    xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:ns="http://tempuri.org/ns.xsd"
+    xmlns="http://www.w3.org/2001/XMLSchema"
+    elementFormDefault="unqualified"
+    attributeFormDefault="unqualified">
+    <import namespace="http://schemas.xmlsoap.org/soap/encoding/"/>
+    <simpleType name="concatType"><!-- ns__concatType -->
+      <restriction base="ns:concatStruct">
+      </restriction>
+    </simpleType>
+    <simpleType name="addType"><!-- ns__addType -->
+      <restriction base="ns:addStruct">
+      </restriction>
+    </simpleType>
+    <simpleType name="byeType"><!-- ns__byeType -->
+      <restriction base="ns:byeStruct">
+      </restriction>
+    </simpleType>
+    <simpleType name="stringType"><!-- ns__stringType -->
+      <restriction base="xsd:string">
+      </restriction>
+    </simpleType>
+    <simpleType name="longType"><!-- ns__longType -->
+      <restriction base="xsd:long">
+      </restriction>
+    </simpleType>
+    <complexType name="concatStruct"><!-- concatStruct -->
+          <sequence>
+            <element name="id" type="xsd:long" minOccurs="1" maxOccurs="1"/><!-- concatStruct::id -->
+            <element name="op1" type="xsd:string" minOccurs="1" maxOccurs="1"/><!-- concatStruct::op1 -->
+            <element name="op2" type="xsd:string" minOccurs="1" maxOccurs="1"/><!-- concatStruct::op2 -->
+          </sequence>
+    </complexType>
+    <complexType name="addStruct"><!-- addStruct -->
+          <sequence>
+            <element name="id" type="xsd:long" minOccurs="1" maxOccurs="1"/><!-- addStruct::id -->
+            <element name="op1" type="xsd:long" minOccurs="1" maxOccurs="1"/><!-- addStruct::op1 -->
+            <element name="op2" type="xsd:long" minOccurs="1" maxOccurs="1"/><!-- addStruct::op2 -->
+          </sequence>
+    </complexType>
+    <complexType name="byeStruct"><!-- byeStruct -->
+          <sequence>
+            <element name="id" type="xsd:long" minOccurs="1" maxOccurs="1"/><!-- byeStruct::id -->
+          </sequence>
+    </complexType>
+    <!-- operation request element -->
+    <element name="connect">
+      <complexType>
+          <sequence>
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation response element -->
+    <element name="connectResponse">
+      <complexType>
+          <sequence>
+            <element name="connect" type="ns:longType" minOccurs="0" maxOccurs="1"/><!-- ns__connect::connect -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation request element -->
+    <element name="echo">
+      <complexType>
+          <sequence>
+            <element name="echoRequest" type="ns:stringType" minOccurs="1" maxOccurs="1"/><!-- ns__echo::echoRequest -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation response element -->
+    <element name="echoResponse">
+      <complexType>
+          <sequence>
+            <element name="echo" type="ns:stringType" minOccurs="0" maxOccurs="1"/><!-- ns__echo::echo -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation request element -->
+    <element name="concat">
+      <complexType>
+          <sequence>
+            <element name="concatRequest" type="ns:concatType" minOccurs="1" maxOccurs="1"/><!-- ns__concat::concatRequest -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation response element -->
+    <element name="concatResponse">
+      <complexType>
+          <sequence>
+            <element name="concat" type="ns:stringType" minOccurs="0" maxOccurs="1"/><!-- ns__concat::concat -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation request element -->
+    <element name="adder">
+      <complexType>
+          <sequence>
+            <element name="adderRequest" type="ns:addType" minOccurs="1" maxOccurs="1"/><!-- ns__adder::adderRequest -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation response element -->
+    <element name="adderResponse">
+      <complexType>
+          <sequence>
+            <element name="adder" type="ns:longType" minOccurs="0" maxOccurs="1"/><!-- ns__adder::adder -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation request element -->
+    <element name="bye">
+      <complexType>
+          <sequence>
+            <element name="byeRequest" type="ns:byeType" minOccurs="1" maxOccurs="1"/><!-- ns__bye::byeRequest -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation response element and type -->
+    <element name="byeResponse" type="ns:byeResponse"/>
+    <complexType name="byeResponse">
+          <sequence>
+          </sequence>
+    </complexType>
+  </schema>
+
+</types>
+
+<message name="connectRequest">
+  <part name="Body" element="ns:connect"/><!-- ns__connect::ns__connect -->
+</message>
+
+<message name="connectResponse">
+  <part name="Body" element="ns:connectResponse"/>
+</message>
+
+<message name="echoRequest">
+  <part name="Body" element="ns:echo"/><!-- ns__echo::ns__echo -->
+</message>
+
+<message name="echoResponse">
+  <part name="Body" element="ns:echoResponse"/>
+</message>
+
+<message name="concatRequest">
+  <part name="Body" element="ns:concat"/><!-- ns__concat::ns__concat -->
+</message>
+
+<message name="concatResponse">
+  <part name="Body" element="ns:concatResponse"/>
+</message>
+
+<message name="adderRequest">
+  <part name="Body" element="ns:adder"/><!-- ns__adder::ns__adder -->
+</message>
+
+<message name="adderResponse">
+  <part name="Body" element="ns:adderResponse"/>
+</message>
+
+<message name="bye">
+  <part name="Body" element="ns:bye"/><!-- ns__bye::ns__bye -->
+</message>
+
+<message name="byeResponse">
+  <part name="Body" element="ns:byeResponse"/><!-- ns__bye::bye -->
+</message>
+
+<portType name="SampleServicesPortType">
+  <operation name="connect">
+    <documentation>Service definition of function ns__connect</documentation>
+    <input message="tns:connectRequest"/>
+    <output message="tns:connectResponse"/>
+  </operation>
+  <operation name="echo">
+    <documentation>Service definition of function ns__echo</documentation>
+    <input message="tns:echoRequest"/>
+    <output message="tns:echoResponse"/>
+  </operation>
+  <operation name="concat">
+    <documentation>Service definition of function ns__concat</documentation>
+    <input message="tns:concatRequest"/>
+    <output message="tns:concatResponse"/>
+  </operation>
+  <operation name="adder">
+    <documentation>Service definition of function ns__adder</documentation>
+    <input message="tns:adderRequest"/>
+    <output message="tns:adderResponse"/>
+  </operation>
+  <operation name="bye">
+    <documentation>Service definition of function ns__bye</documentation>
+    <input message="tns:bye"/>
+    <output message="tns:byeResponse"/>
+  </operation>
+</portType>
+
+<binding name="SampleServices" type="tns:SampleServicesPortType">
+  <SOAP:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+  <operation name="connect">
+    <SOAP:operation soapAction=""/>
+    <input>
+          <SOAP:body use="literal" parts="Body"/>
+    </input>
+    <output>
+          <SOAP:body use="literal" parts="Body"/>
+    </output>
+  </operation>
+  <operation name="echo">
+    <SOAP:operation soapAction=""/>
+    <input>
+          <SOAP:body use="literal" parts="Body"/>
+    </input>
+    <output>
+          <SOAP:body use="literal" parts="Body"/>
+    </output>
+  </operation>
+  <operation name="concat">
+    <SOAP:operation soapAction=""/>
+    <input>
+          <SOAP:body use="literal" parts="Body"/>
+    </input>
+    <output>
+          <SOAP:body use="literal" parts="Body"/>
+    </output>
+  </operation>
+  <operation name="adder">
+    <SOAP:operation soapAction=""/>
+    <input>
+          <SOAP:body use="literal" parts="Body"/>
+    </input>
+    <output>
+          <SOAP:body use="literal" parts="Body"/>
+    </output>
+  </operation>
+  <operation name="bye">
+    <SOAP:operation soapAction=""/>
+    <input>
+          <SOAP:body use="literal" parts="Body"/>
+    </input>
+    <output>
+          <SOAP:body use="literal" parts="Body"/>
+    </output>
+  </operation>
+</binding>
+
+<service name="SampleServices">
+  <documentation>gSOAP 2.8.132 generated service definition</documentation>
+  <port name="SampleServices" binding="tns:SampleServices">
+    <SOAP:address location="http://localhost:80"/>
+  </port>
+</service>
+
+</definitions>

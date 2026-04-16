@@ -1,0 +1,15 @@
+total 112
+41088654 drwxr-xr-x  14 alex  staff   448 Jun 13 16:52 .
+41088627 drwxr-xr-x   6 alex  staff   192 Jun 13 16:01 ..
+42268152 -rw-r--r--@  1 alex  staff  6148 Jun  7 14:12 .DS_Store
+42628331 -rwxr--r--   1 alex  staff    12 Jun 13 14:55 Tema
+42628343 -rwxr--r--   1 alex  staff    12 Jun 13 14:56 Tema\
+42630458 -rwx------   1 alex  staff     0 Jun 13 15:42 filename_de_test_1.java
+42630476 -rwx------   1 alex  staff     0 Jun 13 15:43 fisier_alt_test.java
+42628999 -rwxr--r--@  1 alex  staff  5036 Jun 13 15:10 t07l08.c
+42628660 -rwxr--r--   1 alex  staff  9667 Jun 13 15:04 t08l09_1.c
+42628333 -rwxr--r--   1 alex  staff  4269 Jun 13 14:58 t09l10_2.c
+42626552 -rwxr--r--   1 alex  staff   465 Jun 13 14:05 test.c
+42624827 -rwxr-xr--@  1 alex  staff    15 Jun 13 16:50 testPCD.py
+42630753 -rwx------   1 alex  staff     0 Jun 13 15:47 test_de_java.java
+42626760 -rwxr--r--   1 alex  staff  1154 Jun 13 14:11 thread_race.c

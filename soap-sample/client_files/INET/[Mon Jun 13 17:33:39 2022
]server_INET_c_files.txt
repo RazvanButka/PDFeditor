@@ -1,0 +1,5 @@
+42628999 -rwxr--r--@ 1 alex  staff  5036 Jun 13 15:10 ./serv_files/INET/t07l08.c
+42628660 -rwxr--r--  1 alex  staff  9667 Jun 13 15:04 ./serv_files/INET/t08l09_1.c
+42628333 -rwxr--r--  1 alex  staff  4269 Jun 13 14:58 ./serv_files/INET/t09l10_2.c
+42626552 -rwxr--r--  1 alex  staff   465 Jun 13 14:05 ./serv_files/INET/test.c
+42626760 -rwxr--r--  1 alex  staff  1154 Jun 13 14:11 ./serv_files/INET/thread_race.c

@@ -1,0 +1,29 @@
+Command: gcc -o test serv_files/INET/test.c && ./test
+serv_files/INET/test.c:3:21: error: implicitly declaring library function 'malloc' with type 'void *(unsigned long)' [-Werror,-Wimplicit-function-declaration]
+    void ** items = malloc(sizeof(void**) * 2);
+                    ^
+serv_files/INET/test.c:3:21: note: include the header <stdlib.h> or explicitly provide a declaration for 'malloc'
+serv_files/INET/test.c:5:5: error: implicitly declaring library function 'strcpy' with type 'char *(char *, const char *)' [-Werror,-Wimplicit-function-declaration]
+    strcpy(items[0], "ana");
+    ^
+serv_files/INET/test.c:5:5: note: include the header <string.h> or explicitly provide a declaration for 'strcpy'
+serv_files/INET/test.c:7:17: error: incomplete type 'void' is not assignable
+    items[1][0] = 1;
+    ~~~~~~~~~~~ ^
+serv_files/INET/test.c:10:13: error: use of undeclared identifier 'j'
+        for(j=0;j<sizeof(items[i]);j++){
+            ^
+serv_files/INET/test.c:10:17: error: use of undeclared identifier 'j'
+        for(j=0;j<sizeof(items[i]);j++){
+                ^
+serv_files/INET/test.c:10:36: error: use of undeclared identifier 'j'
+        for(j=0;j<sizeof(items[i]);j++){
+                                   ^
+serv_files/INET/test.c:12:38: error: use of undeclared identifier 'j'
+                printf("%c",items[i][j]);
+                                     ^
+serv_files/INET/test.c:14:40: error: use of undeclared identifier 'j'
+            else printf("%d", items[i][j]);
+                                       ^
+8 errors generated.
+execl(): Invalid argument

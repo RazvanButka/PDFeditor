@@ -1,0 +1,10 @@
+Command: gcc -o t09l10_2 serv_files/INET/t09l10_2.c && ./t09l10_2
+P2 vrea R2
+P2 obtine R2
+P1 vrea R1
+P1 obtine R1
+P1 vrea R2
+P2 vrea R1
+P2 obtine R1
+P1 obtine R2
+execl(): Invalid argument
