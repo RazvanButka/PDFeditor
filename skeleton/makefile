@@ -1,7 +1,9 @@
-MUPDF_LIB = -lmupdf -lmujs -lfreetype -lz -lm \
-			-ljpeg  -lopenjp2  -ljbig2dec
+MUPDF_LIB = -lmupdf -lmupdf-third -lmujs -lfreetype -lharfbuzz -lgumbo \
+			-lz -lm -ljpeg -lopenjp2 -ljbig2dec
 
-OBJECTS=unixds.o inetds.o soapds.o proto.o pdfds.o 
+OCR_LIB = -ltesseract -llept 
+
+OBJECTS=unixds.o inetds.o soapds.o proto.o pdfds.o pdf_ocr.o
 
 help:
 	@echo "Use one of these"
@@ -19,7 +21,7 @@ help:
 	@echo "	sudo apt upgrade"
 	
 serverds: threeds.c ${OBJECTS} SampleServices.nsmap
-	gcc -g threeds.c soapC.c soapServer.c ${OBJECTS} -lpthread -l gsoap -l config ${MUPDF_LIB} -Wall -o serverds
+	gcc -g threeds.c soapC.c soapServer.c ${OBJECTS} -lpthread -l gsoap -l config ${MUPDF_LIB} ${OCR_LIB} -Wall -o serverds
 
 unixds.o: unixds.c 
 	gcc -g unixds.c -c -o unixds.o -Wall -lpthread
@@ -35,6 +37,9 @@ soapds.o: soapds.c SampleServices.nsmap
 
 pdfds.o: pdfds.c proto.h 
 	gcc -g pdfds.c -c -o pdfds.o -Wall -lpthread ${MUPDF_LIB}
+
+pdf_ocr.o: pdf_ocr.c pdf_ocr.h
+	gcc -g pdf_ocr.c -c -o pdf_ocr.o -Wall ${MUPDF_LIB} ${OCR_LIB}
 
 SampleServices.nsmap: sclient.h
 	soapcpp2 -S -c -x sclient.h

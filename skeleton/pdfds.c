@@ -10,6 +10,7 @@
 #include <mupdf/fitz.h>
 #include <libconfig.h>
 #include "proto.h"
+#include "pdf_ocr.h" //Pt Tesseract 
 
 #define PDF_PORT 18083
 
@@ -33,6 +34,9 @@ void pdf_init()
     {
         fprintf(stderr, "Fail to register handler");
         exit(1);
+    }
+    if (ocr_init("ron+eng") < 0) { // Tesseract
+        fprintf(stderr, "Warning: OCR disabled\n");
     }
 }
 
@@ -94,6 +98,7 @@ void pdfHandleClient(int sock)
         switch (header.opID)
         {
         case OPR_PDF_OPEN_DOC:
+        {
             recv(sock, &msg, sizeof(msg), MSG_WAITALL);
             result = pdf_open(msg.fileName);
             msgHeaderType resp;
@@ -105,8 +110,9 @@ void pdfHandleClient(int sock)
             send(sock, &x, sizeof(int), 0);
             printf("Send page count: %d", result);
             break;
-
+        }
         case OPR_PDF_CLOSE:
+        {
             recv(sock, &msg, sizeof(msg), MSG_WAITALL);
             pdf_close();
             msgHeaderType response;
@@ -117,7 +123,27 @@ void pdfHandleClient(int sock)
             printf("Document closed.");
             goto cleanup;
             break;
-
+        } 
+        case OPR_PDF_OCR: //Tesseract 
+        {
+            recv(sock, &msg, sizeof(msg), MSG_WAITALL);
+            char *text = ocr_extract_all_text(pdf_ctx, currentDoc, 300);
+    
+            msgHeaderType resp;
+            int len = text ? strlen(text) : 0;
+            resp.msgSize = htonl(sizeof(msgHeaderType) + sizeof(int) + len);
+            resp.clientID = msg.header.clientID;
+            resp.opID = htonl(OPR_PDF_OCR);
+            send(sock, &resp, sizeof(msgHeaderType), 0);
+    
+            int nlen = htonl(len);
+            send(sock, &nlen, sizeof(int), 0);
+            if (text) {
+                send(sock, text, len, 0);
+                free(text);
+            }
+            break;
+        }
         default:
             break;
         }
@@ -156,7 +182,7 @@ void pdf_main()
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(PDF_PORT);
 
-    if (bind(serverSocket, (struct sockaddr *)&serverAddr, 0) < 0)
+    if (bind(serverSocket, (struct sockaddr *)&serverAddr,sizeof(serverAddr)) < 0)
     {
         perror("Bind");
         close(serverSocket);
