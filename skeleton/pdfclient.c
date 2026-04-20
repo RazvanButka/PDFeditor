@@ -79,6 +79,48 @@ int main(int argc, char *argv[])
         printf("Fail");
     }
 
+    pdfSimpleMsgType ocrMsg;  //Tesseract 
+    ocrMsg.header.msgSize = htonl(sizeof(ocrMsg));
+    ocrMsg.header.clientID = htonl(0);
+    ocrMsg.header.opID = htonl(OPR_PDF_OCR);
+    strncpy(ocrMsg.fileName, argv[1], 255);
+    ocrMsg.fileName[255] = '\0';
+
+    if (send(sock, &ocrMsg, sizeof(ocrMsg), 0) < 0) {
+        perror("OCR send failed");
+        exit(1);
+    }
+
+    msgHeaderType ocrResponse;
+    int textLen;
+    if (recv(sock, &ocrResponse, sizeof(ocrResponse), MSG_WAITALL) < 0) {
+        perror("OCR response header failed");
+        return 1;
+    }
+    if (recv(sock, &textLen, sizeof(int), MSG_WAITALL) < 0) {
+        perror("OCR text length failed");
+        return 1;
+    }
+    textLen = ntohl(textLen);
+    
+    if (textLen > 0) {
+        char *text = malloc(textLen + 1);
+        if (!text) {
+            perror("malloc OCR buffer");
+            return 1;
+        }
+        if (recv(sock, text, textLen, MSG_WAITALL) < 0) {
+            perror("OCR text recv failed");
+            free(text);
+            return 1;
+        }
+        text[textLen] = '\0';
+        printf("\n=== OCR result ===\n%s\n=== End OCR ===\n", text);
+        free(text);
+    } else {
+        printf("\nOCR returned no text\n");
+    } //Tesseract 
+
     pdfSimpleMsgType closeMsg;
     closeMsg.header.msgSize = htonl(sizeof(closeMsg));
     closeMsg.header.clientID = htonl(0);

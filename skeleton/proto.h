@@ -11,6 +11,7 @@
 #define OPR_PDF_PAGE_COUNT 11
 #define OPR_PDF_PAGE 12
 #define OPR_PDF_CLOSE 13
+#define OPR_PDF_OCR 14 // Tesseract
 
 typedef struct msgHeader
 {
