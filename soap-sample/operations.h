@@ -758,7 +758,7 @@ C server function (called from the service dispatcher defined in soapServer.c[pp
 //gsoap ns1  service method-encoding:	createFile literal
 //gsoap ns1  service method-input-action:	createFile http://www.example.org/operations/createFile
 //gsoap ns1  service method-output-action:	createFile http://www.example.org/operations/createFileResponse
-int __ns1__createFile( struct soap * s,
+int __ns1__createFile(
     struct _ns1__createFile*            ns1__createFile,	///< Input parameter
     struct _ns1__createFileResponse    *ns1__createFileResponse	///< Output parameter
 );

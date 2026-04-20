@@ -1,0 +1,26 @@
+{
+	'py':1,
+	 'c':8,
+	 'cpp': 3,
+	 'java': 1
+}
+pr 19 00:57 terge-ma
+51739 drwxr-xr-x 2 razvi razvi 4096 Apr 19 17:38 .
+51430 drwxr-xr-x 4 razvi razvi 4096 Apr 19 00:57 ..
+52610 -rwxr--r-- 1 razvi razvi    0 Apr 19 00:57 1.java
+52622 -rwxr-xr-x 1 razvi razvi  465 Apr 19 00:57 a.c
+52624 -rwxr-xr-x 1 razvi razvi 1989 Apr 19 00:57 bubblesort.c
+52631 -rwxr-xr-x 1 razvi razvi 1192 Apr 19 00:57 ex.c
+52632 -rwxr-xr-x 1 razvi razvi  767 Apr 19 00:57 exfork.c
+52634 -rwxr-xr-x 1 razvi razvi    0 Apr 19 00:57 fisier_de_test.cpp
+52639 -rwxr-xr-x 1 razvi razvi    0 Apr 19 00:57 fisierdetest
+52640 -rwxr-xr-x 1 razvi razvi  111 Apr 19 00:57 signal.c
+52644 -rwxr-xr-x 1 razvi razvi 1808 Apr 19 00:57 stack.c
+52649 -rwxr-xr-x 1 razvi razvi  165 Apr 19 00:57 static.c
+53246 -rwxr-xr-x 1 razvi razvi  218 Apr 19 00:57 static.cpp
+53248 -rwxr-xr-x 1 razvi razvi  169 Apr 19 00:57 test1.cpp
+11355 -rwxr-S--x 1 razvi razvi    0 Apr 19 17:38 test1.txt
+12998 -rwxr-S--x 1 razvi razvi    0 Apr 19 17:38 test2.txt
+53259 -rwxr-xr-x 1 razvi razvi   15 Apr 19 00:57 testPCD.py
+11358 -rwxr-S--x 1 razvi razvi    0 Apr 19 17:09 test_file.txt
+53260 -rwxr-xr-x 1 razvi razvi 1154 Apr 19 00:57 thread_race.c
