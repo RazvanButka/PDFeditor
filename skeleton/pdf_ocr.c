@@ -1,4 +1,8 @@
-
+/**
+Programul de mai jos implementeaza recunoasterea caracterelor pentru documentele PDF cu ajutorul integrarii:
+* MuPDF care randeaza paginile unui PDF in imagini
+* Tesseract OCR care extrage textul din imaginile create
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,8 +12,8 @@
 
 static TessBaseAPI *tess_api = NULL;
 
-int ocr_init(const char *languages) {
-    if (tess_api != NULL) {
+int ocr_init(const char *languages) { 
+    if (tess_api != NULL) { //
         return 0;  
     }
     
@@ -20,29 +24,26 @@ int ocr_init(const char *languages) {
     }
     
     if (TessBaseAPIInit3(tess_api, NULL, languages ? languages : "eng") != 0) {
-        fprintf(stderr, "ocr_init: failed to init Tesseract with lang=%s\n", 
-                languages ? languages : "eng");
+        fprintf(stderr, "ocr_init: failed to init Tesseract with lang=%s\n",languages ? languages : "eng");
         TessBaseAPIDelete(tess_api);
         tess_api = NULL;
         return -1;
     }
     
-    fprintf(stderr, "ocr_init: Tesseract ready, languages=%s\n", 
-            languages ? languages : "eng");
+    fprintf(stderr, "ocr_init: Tesseract ready, languages=%s\n", languages ? languages : "eng");
     return 0;
 }
 
-void ocr_cleanup(void) {
+void ocr_cleanup(void) { //Functia de cleanup
     if (tess_api) {
-        TessBaseAPIEnd(tess_api);
-        TessBaseAPIDelete(tess_api);
+        TessBaseAPIEnd(tess_api); //elibereaza modelele neurale
+        TessBaseAPIDelete(tess_api); //elibereaza structura 
         tess_api = NULL;
     }
 }
 
-char *ocr_extract_page_text(fz_context *ctx, fz_document *doc, 
-                            int pageNum, int dpi) {
-    if (!tess_api) {
+char *ocr_extract_page_text(fz_context *ctx, fz_document *doc,int pageNum, int dpi) { //Aici se transforma pagina PDF -> imagine si in text
+    if (!tess_api) { 
         fprintf(stderr, "ocr_extract_page_text: OCR not initialized\n");
         return NULL;
     }
@@ -52,11 +53,10 @@ char *ocr_extract_page_text(fz_context *ctx, fz_document *doc,
     char *result = NULL;
     
     fz_try(ctx) {
-        fz_matrix mat = fz_scale(dpi / 72.0f, dpi / 72.0f);
-        pix = fz_new_pixmap_from_page_number(ctx, doc, pageNum, 
-                                              mat, fz_device_rgb(ctx), 0);
+        fz_matrix mat = fz_scale(dpi / 72.0f, dpi / 72.0f); //Am creat o matrice de tranformare 2D de scalare uniforma
+        pix = fz_new_pixmap_from_page_number(ctx, doc, pageNum,mat, fz_device_rgb(ctx), 0);   //Returnam pixmap-ul 
     }
-    fz_catch(ctx) {
+    fz_catch(ctx) { //Partea de eroare
         fprintf(stderr, "ocr_extract_page_text: render failed for page %d\n", pageNum);
         return NULL;
     }
@@ -64,17 +64,17 @@ char *ocr_extract_page_text(fz_context *ctx, fz_document *doc,
     if (!pix) return NULL;
     
     
-    int bpp = fz_pixmap_components(ctx, pix);   
-    int w   = fz_pixmap_width(ctx, pix);
-    int h   = fz_pixmap_height(ctx, pix);
-    int stride = fz_pixmap_stride(ctx, pix);
-    unsigned char *samples = fz_pixmap_samples(ctx, pix);
+    int bpp = fz_pixmap_components(ctx, pix);   //nr de canale de culoare
+    int w = fz_pixmap_width(ctx, pix); 
+    int h= fz_pixmap_height(ctx, pix);
+    int stride = fz_pixmap_stride(ctx, pix); //nr de bytes dintr-o linie a imaginii
+    unsigned char *samples = fz_pixmap_samples(ctx, pix); //buffer-ul 
     
-    TessBaseAPISetImage(tess_api, samples, w, h, bpp, stride);
-    TessBaseAPISetSourceResolution(tess_api, dpi);
+    TessBaseAPISetImage(tess_api, samples, w, h, bpp, stride); //Memoram pointerul samples
+    TessBaseAPISetSourceResolution(tess_api, dpi); // Spunem tesseract-ului ca imaginea este capturata la 300DPI
     
     
-    char *tess_text = TessBaseAPIGetUTF8Text(tess_api);
+    char *tess_text = TessBaseAPIGetUTF8Text(tess_api); //analizam layout ul paginii si combinam caracterele in text UTF-8
     if (tess_text) {
         result = strdup(tess_text);
         TessDeleteText(tess_text);
@@ -84,7 +84,7 @@ char *ocr_extract_page_text(fz_context *ctx, fz_document *doc,
     return result;
 }
 
-char *ocr_extract_all_text(fz_context *ctx, fz_document *doc, int dpi) {
+char *ocr_extract_all_text(fz_context *ctx, fz_document *doc, int dpi) { //Facem OCR-ul pentru toate paginile unui PDF
     if (!ctx || !doc) return NULL;
     
     int pageCount = 0;
@@ -101,14 +101,14 @@ char *ocr_extract_all_text(fz_context *ctx, fz_document *doc, int dpi) {
     if (!accumulated) return NULL;
     accumulated[0] = '\0';
     
-    for (int i = 0; i < pageCount; i++) {
+    for (int i = 0; i < pageCount; i++) { //procesam pagina cu pagina
         char *page_text = ocr_extract_page_text(ctx, doc, i, dpi);
         if (!page_text) continue;
         
         size_t len = strlen(page_text);
         size_t header_len = 32; 
         
-        while (total_size + len + header_len >= capacity) {
+        while (total_size + len + header_len >= capacity) { //aici dublam buffer-ul in cazul in care avem nevoie de mai mult spatiu
             capacity *= 2;
             char *tmp = realloc(accumulated, capacity);
             if (!tmp) {
@@ -119,8 +119,7 @@ char *ocr_extract_all_text(fz_context *ctx, fz_document *doc, int dpi) {
             accumulated = tmp;
         }
         
-        total_size += snprintf(accumulated + total_size, capacity - total_size,
-                               "\n=== Page %d ===\n%s", i + 1, page_text);
+        total_size += snprintf(accumulated + total_size, capacity - total_size,"\n=== Page %d ===\n%s", i + 1, page_text);
         free(page_text);
     }
     

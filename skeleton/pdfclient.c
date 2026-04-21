@@ -1,12 +1,21 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include "proto.h"
+/*
+* Programul de mai jos implementeaza un client TCP care se conecteaza la un server PDF
+* si trimite cereri pentru deschiderea si inchiderea unui fisier PDF
+* Clientul trimite numele fisierului catre server, primeste numarul de pagini,
+* si apoi solicita inchiderea documentului
+* Printre situatiile limita tratate se numara:
+numarul insuficient de argumente, trimiterea/primirea incompleta a datelor
+*/
+
+#include <stdio.h> //input output
+#include <stdlib.h> //exit
+#include <string.h> //manipulare string
+#include <unistd.h> //Apeluri POSIX (close)
+#include <sys/types.h> //tiprui de socketuri
+#include <sys/socket.h> //pt implementarea functiilor socket, connect,etc
+#include <netinet/in.h> //structuri pentru adrese IP
+#include <arpa/inet.h> //functiile inet_pton, htons
+#include "proto.h" //defintii pentru protocolul de comunicare
 
 #define PDF_SERVER "127.0.0.1"
 #define PDF_PORT 18083
