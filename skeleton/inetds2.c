@@ -12,8 +12,6 @@
 #include <arpa/inet.h>
 #include "proto.h"
 
-
-
 int inet_socket (uint16_t port, short reuse) {
   int sock;
   struct sockaddr_in name;
