@@ -1,4 +1,6 @@
 /**
+Bǎlean Kevin-Lucian
+IR3 2026, subgrupa 2
 Programul de mai jos implementeaza recunoasterea caracterelor pentru documentele PDF cu ajutorul integrarii:
 * MuPDF care randeaza paginile unui PDF in imagini
 * Tesseract OCR care extrage textul din imaginile create
