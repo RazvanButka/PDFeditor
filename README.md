@@ -2,7 +2,7 @@
 
 Server multi-threaded care expune servicii de procesare PDF prin 4 interfețe paralele: UNIX socket, INET TCP, SOAP și PDF TCP. Include recunoaștere text prin Tesseract integrat cu MuPDF.
 
-## Cerințe sistem
+## Cerințe sistem:
 
 - Ubuntu(sau Docker/Dev Container)
 - GCC + Make
