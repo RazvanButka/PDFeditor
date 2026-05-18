@@ -1,21 +1,34 @@
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <mupdf/fitz.h>
-#include <libconfig.h>
-#include "proto.h"
+/**
+* Programul de mai jos implementeaza un server TCP pentru manipularea fisierelor PDF
+* folosind biblioteca MuPDF. Serverul accepta conexiuni de la clienti si permite operatii precum deschiderea
+* unui document PDF si inchiderea acestuia
+* Comunicarea se face pe baza unor mesaje definite intr-un protocol propriu (proto.h)
+* iar serverul proceseaza cererile clientului intr-un mod secvential
+* Printre situatiile limita au fost:
+contextil MuPDF neinitializat, deschiderea unui fisier inexistent si inchiderea unui fisier invalid
+*/
+
+
+#include <pthread.h> //pt lucrul cu firele de control
+#include <stdio.h> //input output
+#include <stdlib.h> //pt alocarea memoriei
+#include <string.h> //pt manipularea stringurilor
+#include <unistd.h> //pt apeluri de sistem
+#include <sys/types.h> //pentru tipuri de date
+#include <sys/socket.h> //pentru socketuri
+#include <netinet/in.h> //pt structuri adrese IP
+#include <arpa/inet.h> //pt conversii adrese IP
+#include <mupdf/fitz.h> //folosita pt manipularea fisierelor PDF
+#include <libconfig.h> //pt configurari de fisiere
+#include "proto.h" //definitii pentru structuri din protocolul aplicatiei
+#include "pdf_ocr.h" //Pt Tesseract 
 
 #define PDF_PORT 18083
 
 static fz_context *pdf_ctx = NULL;
 static fz_document *currentDoc = NULL;
 
+//Initializare MuPDF
 void pdf_init()
 {
     pdf_ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
@@ -34,8 +47,12 @@ void pdf_init()
         fprintf(stderr, "Fail to register handler");
         exit(1);
     }
+    if (ocr_init("ron+eng") < 0) { // Tesseract
+        fprintf(stderr, "Warning: OCR disabled\n");
+    }
 }
 
+//Deschiderea documentului PDF
 int pdf_open(char *fileName)
 {
     if (!pdf_ctx || !fileName)
@@ -57,7 +74,7 @@ int pdf_open(char *fileName)
 
     return pageCount;
 }
-
+//Inchiderea documentului PDF
 void pdf_close()
 {
     if (!pdf_ctx || !currentDoc)
@@ -77,6 +94,7 @@ void pdf_close()
     }
 }
 
+//Gestioneaza comunicarea dintre client si server
 void pdfHandleClient(int sock)
 {
     msgHeaderType header;
@@ -94,6 +112,7 @@ void pdfHandleClient(int sock)
         switch (header.opID)
         {
         case OPR_PDF_OPEN_DOC:
+        {
             recv(sock, &msg, sizeof(msg), MSG_WAITALL);
             result = pdf_open(msg.fileName);
             msgHeaderType resp;
@@ -105,8 +124,9 @@ void pdfHandleClient(int sock)
             send(sock, &x, sizeof(int), 0);
             printf("Send page count: %d", result);
             break;
-
+        }
         case OPR_PDF_CLOSE:
+        {
             recv(sock, &msg, sizeof(msg), MSG_WAITALL);
             pdf_close();
             msgHeaderType response;
@@ -117,7 +137,27 @@ void pdfHandleClient(int sock)
             printf("Document closed.");
             goto cleanup;
             break;
-
+        } 
+        case OPR_PDF_OCR: //Tesseract 
+        {
+            recv(sock, &msg, sizeof(msg), MSG_WAITALL);
+            char *text = ocr_extract_all_text(pdf_ctx, currentDoc, 300);
+    
+            msgHeaderType resp;
+            int len = text ? strlen(text) : 0;
+            resp.msgSize = htonl(sizeof(msgHeaderType) + sizeof(int) + len);
+            resp.clientID = msg.header.clientID;
+            resp.opID = htonl(OPR_PDF_OCR);
+            send(sock, &resp, sizeof(msgHeaderType), 0);
+    
+            int nlen = htonl(len);
+            send(sock, &nlen, sizeof(int), 0);
+            if (text) {
+                send(sock, text, len, 0);
+                free(text);
+            }
+            break;
+        }
         default:
             break;
         }
@@ -127,6 +167,7 @@ cleanup:
     printf("Connection closed");
 }
 
+//Functia principala a serverului care creeaza si configureaza socket ul si incepe ascultarea conexiunilor
 void pdf_main()
 {
     int port = PDF_PORT;
@@ -156,7 +197,7 @@ void pdf_main()
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(PDF_PORT);
 
-    if (bind(serverSocket, (struct sockaddr *)&serverAddr, 0) < 0)
+    if (bind(serverSocket, (struct sockaddr *)&serverAddr,sizeof(serverAddr)) < 0)
     {
         perror("Bind");
         close(serverSocket);

@@ -114,10 +114,23 @@ void *soap_main (void *args) {
     for (;;) {
         csd = soap_accept (&soap) ;
         if (csd < 0) { soap_print_fault (&soap, stderr); break ; }
-//    soapwnd = newwin (16, 70, 5, 5) ;
-        if (soap_serve (&soap) != SOAP_OK) soap_print_fault (&soap, stderr) ;
+        
+        fprintf(stderr, "[SERVER DEBUG] Connection accepted from client\n");
+        fflush(stderr);
+        
+        int serve_result = soap_serve (&soap);
+        fprintf(stderr, "[SERVER DEBUG] soap_serve returned: %d\n", serve_result);
+        fprintf(stderr, "[SERVER DEBUG] soap.error = %d\n", soap.error);
+        
+        if (serve_result != SOAP_OK) {
+            fprintf(stderr, "[SERVER DEBUG] SOAP error occurred\n");
+            soap_print_fault (&soap, stderr);
+        }
+        
         soap_destroy (&soap) ;
         soap_end (&soap) ;
+        fprintf(stderr, "[SERVER DEBUG] Request processing complete\n");
+        fflush(stderr);
     }
     soap_done (&soap) ;
     pthread_exit (NULL) ;
@@ -199,14 +212,22 @@ int __ns1__storeFile(
 // operatia 2: creeaza fisier pe server
 
 int __ns1__createFile(
-        struct soap * s, // soap
+        struct soap * s,
         struct _ns1__createFile*             ns1__createFile,	///< Input parameter
         struct _ns1__createFileResponse     *ns1__createFileResponse	///< Output parameter
 ){
+    fprintf(stderr, "[HANDLER DEBUG] __ns1__createFile called\n");
+    fprintf(stderr, "[HANDLER DEBUG] Filename: %s\n", ns1__createFile->in);
+    fflush(stderr);
+    
     int fd;
     char path[200];
     sprintf(path, "./serv_files/SOAP/%s", ns1__createFile->in);
     path[strlen(path)] = 0;
+    
+    fprintf(stderr, "[HANDLER DEBUG] Creating file at: %s\n", path);
+    fflush(stderr);
+    
     fd = open(path, O_RDWR | O_CREAT);
     if(fd < 0){
         soap_print_fault(s, stderr);
