@@ -1,0 +1,27 @@
+build/obj/*
+!build/obj/.gitkeep
+build/generated/soap/*
+!build/generated/soap/.gitkeep
+bin/*
+!bin/.gitkeep
+config/server.cfg
+
+# Output OCR / test results (generated locally)
+result_*
+data/input/*
+!data/input/.gitkeep
+data/output/*
+!data/output/.gitkeep
+
+# OS / Editor artifacts (NEVER commit)
+*Zone.Identifier
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Test data (generated locally)
+data/

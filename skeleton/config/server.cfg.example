@@ -1,0 +1,11 @@
+# Exemplu configurare server PDF (libconfig)
+# Copiaza: cp config/server.cfg.example config/server.cfg
+
+server = {
+  port = 18083;
+  admin_timeout = 120;
+  chunk_size = 4096;
+  unix_socket_path = "/tmp/admin.sock";
+  incoming_dir = "data/input";
+  outgoing_dir = "data/output";
+};

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <schema targetNamespace="http://tempuri.org/ns.xsd"
+    xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:ns="http://tempuri.org/ns.xsd"
+    xmlns="http://www.w3.org/2001/XMLSchema"
+    elementFormDefault="unqualified"
+    attributeFormDefault="unqualified">
+    <import namespace="http://schemas.xmlsoap.org/soap/encoding/"/>
+    <simpleType name="concatType"><!-- ns__concatType -->
+      <restriction base="ns:concatStruct">
+      </restriction>
+    </simpleType>
+    <simpleType name="addType"><!-- ns__addType -->
+      <restriction base="ns:addStruct">
+      </restriction>
+    </simpleType>
+    <simpleType name="byeType"><!-- ns__byeType -->
+      <restriction base="ns:byeStruct">
+      </restriction>
+    </simpleType>
+    <simpleType name="stringType"><!-- ns__stringType -->
+      <restriction base="xsd:string">
+      </restriction>
+    </simpleType>
+    <simpleType name="longType"><!-- ns__longType -->
+      <restriction base="xsd:long">
+      </restriction>
+    </simpleType>
+    <complexType name="concatStruct"><!-- concatStruct -->
+          <sequence>
+            <element name="id" type="xsd:long" minOccurs="1" maxOccurs="1"/><!-- concatStruct::id -->
+            <element name="op1" type="xsd:string" minOccurs="1" maxOccurs="1"/><!-- concatStruct::op1 -->
+            <element name="op2" type="xsd:string" minOccurs="1" maxOccurs="1"/><!-- concatStruct::op2 -->
+          </sequence>
+    </complexType>
+    <complexType name="addStruct"><!-- addStruct -->
+          <sequence>
+            <element name="id" type="xsd:long" minOccurs="1" maxOccurs="1"/><!-- addStruct::id -->
+            <element name="op1" type="xsd:long" minOccurs="1" maxOccurs="1"/><!-- addStruct::op1 -->
+            <element name="op2" type="xsd:long" minOccurs="1" maxOccurs="1"/><!-- addStruct::op2 -->
+          </sequence>
+    </complexType>
+    <complexType name="byeStruct"><!-- byeStruct -->
+          <sequence>
+            <element name="id" type="xsd:long" minOccurs="1" maxOccurs="1"/><!-- byeStruct::id -->
+          </sequence>
+    </complexType>
+    <!-- operation request element -->
+    <element name="connect">
+      <complexType>
+          <sequence>
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation response element -->
+    <element name="connectResponse">
+      <complexType>
+          <sequence>
+            <element name="connect" type="ns:longType" minOccurs="0" maxOccurs="1"/><!-- ns__connect::connect -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation request element -->
+    <element name="echo">
+      <complexType>
+          <sequence>
+            <element name="echoRequest" type="ns:stringType" minOccurs="1" maxOccurs="1"/><!-- ns__echo::echoRequest -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation response element -->
+    <element name="echoResponse">
+      <complexType>
+          <sequence>
+            <element name="echo" type="ns:stringType" minOccurs="0" maxOccurs="1"/><!-- ns__echo::echo -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation request element -->
+    <element name="concat">
+      <complexType>
+          <sequence>
+            <element name="concatRequest" type="ns:concatType" minOccurs="1" maxOccurs="1"/><!-- ns__concat::concatRequest -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation response element -->
+    <element name="concatResponse">
+      <complexType>
+          <sequence>
+            <element name="concat" type="ns:stringType" minOccurs="0" maxOccurs="1"/><!-- ns__concat::concat -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation request element -->
+    <element name="adder">
+      <complexType>
+          <sequence>
+            <element name="adderRequest" type="ns:addType" minOccurs="1" maxOccurs="1"/><!-- ns__adder::adderRequest -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation response element -->
+    <element name="adderResponse">
+      <complexType>
+          <sequence>
+            <element name="adder" type="ns:longType" minOccurs="0" maxOccurs="1"/><!-- ns__adder::adder -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation request element -->
+    <element name="bye">
+      <complexType>
+          <sequence>
+            <element name="byeRequest" type="ns:byeType" minOccurs="1" maxOccurs="1"/><!-- ns__bye::byeRequest -->
+          </sequence>
+      </complexType>
+    </element>
+    <!-- operation response element and type -->
+    <element name="byeResponse" type="ns:byeResponse"/>
+    <complexType name="byeResponse">
+          <sequence>
+          </sequence>
+    </complexType>
+  </schema>
+
