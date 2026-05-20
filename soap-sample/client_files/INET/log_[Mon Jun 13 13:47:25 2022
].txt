@@ -1,2 +1,0 @@
-Command: signalsi
-clang: error: no input files

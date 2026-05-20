@@ -1,2 +1,0 @@
-Command: signal signal.c
-clang: error: no input files

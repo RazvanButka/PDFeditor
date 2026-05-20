@@ -1,3 +1,0 @@
-Command: gcc -o thread_race serv_files/INET/thread_race.c && ./thread_race
-200
-execl(): Invalid argument
