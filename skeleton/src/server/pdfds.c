@@ -1,3 +1,5 @@
+/**
+* Burbea Alexandru, Butka Razvan */
 #include <pthread.h>
 #include <errno.h>
 #include <fcntl.h>

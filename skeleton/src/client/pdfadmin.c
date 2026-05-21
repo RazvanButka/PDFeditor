@@ -1,3 +1,8 @@
+/**
+* Burbea Alexandru 
+* Interfata administrativa pentru serverul PDF
+* Foloseste ncurses pentru o interfata Text User Interface si comunica prin UNIX Domain Socket cu serverul prinicipal
+*/
 #define _POSIX_C_SOURCE 200809L
 
 #include "proto.h"
@@ -16,17 +21,19 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define DEFAULT_UNIX_PATH "/tmp/admin.sock"
-#define RESULT_BUFFER_SIZE 8192
+#define DEFAULT_UNIX_PATH "/tmp/admin.sock" // Calea catre socket-ul UNIX al serverul
+#define RESULT_BUFFER_SIZE 8192 
 
-static int gSocket = -1;
-static uint32_t gClientID = 0;
+static int gSocket = -1; //Socket global folosit pentru comunicare
+static uint32_t gClientID = 0; //ID-ul clientului atribuit de server
 
+/* Ferestrele ncurses*/
 static WINDOW* gResultWin = NULL;
 static WINDOW* gMenuWin = NULL;
 static WINDOW* gHeaderWin = NULL;
 static WINDOW* gInputWin = NULL;
 
+/*Initializeaza interfata ncurses si creeaza ferestrele */
 static void initWindows(void){
     initscr();
     cbreak();
@@ -34,6 +41,7 @@ static void initWindows(void){
     keypad(stdscr, TRUE);
     curs_set(0);
     
+    /*Initializare culori*/
     if(has_colors()){
         start_color();
         init_pair(1, COLOR_WHITE, COLOR_BLUE);
@@ -48,20 +56,25 @@ static void initWindows(void){
     int rows, columns;
     getmaxyx(stdscr, rows, columns);
 
+    /*Fereastra de header*/
     gHeaderWin = newwin(3, columns, 0, 0);
     wbkgd(gHeaderWin, COLOR_PAIR(1));
 
+    /*Fereastra meniului lateral*/
     gMenuWin = newwin(rows - 5, 32, 3, 0);
     box(gMenuWin, 0, 0);
 
+    /*Fereastra pentru rezultate*/
     gResultWin = newwin(rows - 5, columns - 32, 3, 32);
     box(gResultWin, 0, 0);
     scrollok(gResultWin, TRUE);
 
+    /*Fereastra pentru input*/
     gInputWin = newwin(2, columns, rows - 2, 0);
     wbkgd(gInputWin, COLOR_PAIR(7));
 }
 
+/*Distruge ferestrele si inchide ncurses*/
 static void destroyWindows(void){
     if(gHeaderWin) delwin(gHeaderWin);
     if(gMenuWin) delwin(gMenuWin);
@@ -78,6 +91,7 @@ static void drawHeader(void){
     wrefresh(gHeaderWin);
 }   
 
+/**Deseneaza meniul principal */
 static void drawMenu(int selectedMenuItem){
     static const char* menuItems[] = {
         "1. Client list",
@@ -98,6 +112,7 @@ static void drawMenu(int selectedMenuItem){
     mvwprintw(gMenuWin, 1, 2, "Commands for admin:");
     wattroff(gMenuWin, COLOR_PAIR(4) | A_BOLD);
 
+    /*Afiseaza fiecare element al meniului*/
     for(int i = 0; menuItems[i] != NULL; i++){
         if(i == selectedMenuItem){
             wattron(gMenuWin, COLOR_PAIR(2) | A_BOLD);
@@ -118,6 +133,7 @@ static void resultClear(void){
     wrefresh(gResultWin);
 }
 
+/*Afiseaza un mesaj in fereastra de rezultate */
 static void resultPrint(const char* text, int colorPair){
     werase(gResultWin);
     box(gResultWin, 0, 0);
@@ -127,6 +143,7 @@ static void resultPrint(const char* text, int colorPair){
     wrefresh(gResultWin);
 }
 
+/*Afiseaza o cerere de input si citeste textul introdus*/
 static void inputPrompt(const char* prompt, char* buffer, size_t bufferSize){
     werase(gInputWin);
     wattron(gInputWin, COLOR_PAIR(7) | A_BOLD);
@@ -144,17 +161,20 @@ static void inputPrompt(const char* prompt, char* buffer, size_t bufferSize){
     wrefresh(gInputWin);
 }
 
+/*Afiseaza un mesaj de stare in zona de input*/
 static void inputStatus(const char* statusMessage, int isError){
     werase(gInputWin);
     wattron(gInputWin, COLOR_PAIR(isError ? 6 : 5) | A_BOLD);
     mvwprintw(gInputWin, 0, 2, "%s", statusMessage);
     wattroff(gInputWin, COLOR_PAIR(isError ? 6 : 5) | A_BOLD);
     wrefresh(gInputWin);
+    /*Asteapta o tasta*/
     wgetch(gInputWin);
     werase(gInputWin);
     wrefresh(gInputWin);
 }
 
+/*Trimite catre server o operatie simpla ce contine doar header ul*/
 static int sendSimpleOperation(uint32_t opID){
     messageHeaderType header;
     (void)memset(&header, 0, sizeof(header));
@@ -165,31 +185,45 @@ static int sendSimpleOperation(uint32_t opID){
     return send_all(gSocket, &header, sizeof(header));
 }
 
+/*Primeste un raspuns textual de la server*/
 static int receiveTestResponse(char* outputBuffer, size_t outputSize){
     messageHeaderType header;
+
+    /*Citeste header ul*/
     if(recv_all(gSocket, &header, sizeof(header)) < 0){
         return -1;
     }
     uint32_t status = ntohl(header.statusCode);
+
+    /*Verifica statusul*/
     if(status != STATUS_OK){
         (void)snprintf(outputBuffer, outputSize, "Operation failed with status code: %u", status);
         return 0;
     }
+
+    /*Citeste lungimea payload-ului*/
     uint32_t payloadLengthNet;
     if(recv_all(gSocket, &payloadLengthNet, sizeof(payloadLengthNet)) < 0){
         return -1;
     }
     uint32_t payloadLength = ntohl(payloadLengthNet);
+
+    /*Daca nu exista payload*/
     if(payloadLengthNet == 0){
         (void)strncpy(outputBuffer, "Operation completed successfully. No additional data.", outputSize - 1);
         return 0;
     }
+
+    /*Determina cat poate fi citit*/
     size_t toRead = (payloadLength < outputSize - 1) ? (size_t)payloadLength : outputSize - 1;
+
+    /*Citeste datele*/
     if(recv_all(gSocket, outputBuffer, toRead) < 0){
         return -1;
     }
     outputBuffer[toRead] = '\0';
 
+    /*Elimina eventualele date suplimentare*/
     size_t extra = (size_t)payloadLength - toRead;
     char discard[1024];
     while(extra > 0){
@@ -202,6 +236,7 @@ static int receiveTestResponse(char* outputBuffer, size_t outputSize){
     return 0;
 }
 
+/*Afiseaza lista clientilor conectati*/
 static void actionListClients(void){
     resultClear();
     char resultBuffer[RESULT_BUFFER_SIZE];
@@ -212,6 +247,7 @@ static void actionListClients(void){
     resultPrint(resultBuffer, 3);
 }
 
+/*Afiseaza lista joburilor active*/
 static void actionListJobs(void){
     resultClear();
     char resultBuffer[RESULT_BUFFER_SIZE];
@@ -222,6 +258,7 @@ static void actionListJobs(void){
     resultPrint(resultBuffer, 3);
 }
 
+/*Afiseaza statistici despre sistem*/
 static void actionSystemStats(void){
     resultClear();
     char resultBuffer[RESULT_BUFFER_SIZE];
@@ -232,6 +269,7 @@ static void actionSystemStats(void){
     resultPrint(resultBuffer, 5);
 }
 
+/*Afiseaza timpul mediu de executie*/
 static void actionAverageExecution(void){
     resultClear();
     char resultBuffer[RESULT_BUFFER_SIZE];
@@ -242,6 +280,7 @@ static void actionAverageExecution(void){
     resultPrint(resultBuffer, 5);
 }
 
+/*Afiseaza istoricul joburilor */
 static void actionJobHistory(void){
     resultClear();
     char resultBuffer[RESULT_BUFFER_SIZE];
@@ -252,6 +291,10 @@ static void actionJobHistory(void){
     resultPrint(resultBuffer, 3);
 }
 
+/**
+* Elimina fortat un client conectat la server
+* Admin-ul introduce ID-ul clientului iar serverul va inchide conexiunea acelui client
+*/
 static void actionKickClient(void){
     char inputBuffer[64];
     inputPrompt("Enter client ID to kick: ", inputBuffer, sizeof(inputBuffer));
@@ -262,11 +305,15 @@ static void actionKickClient(void){
     }
     adminKickmessageType message;
     (void)memset(&message, 0, sizeof(message));
+    /*Completarea header-ului*/
     message.header.messageSize = htonl((uint32_t)sizeof(message));
     message.header.clientID = htonl(gClientID);
     message.header.opID = htonl(OPR_ADMIN_KICK_CLIENT);
     message.header.statusCode = htonl(STATUS_OK);
+    /*ID-ul clientului tinta*/
     message.targetClientID = htonl((uint32_t)clientID);
+
+    /*Trimite cerere catre server*/
     if(send_all(gSocket, &message, sizeof(message)) < 0){
         inputStatus("Failed to send request to server.", 1);
         return;
@@ -277,6 +324,7 @@ static void actionKickClient(void){
         return;
     }
 
+    /*Extrage codul de status*/
     uint32_t status = ntohl(responseHeader.statusCode);
     if(status == STATUS_OK){
         inputStatus("Client kicked successfully.", 0);
@@ -289,7 +337,7 @@ static void actionKickClient(void){
         inputStatus("Unknown error occurred.", 1);
     }
 }
-
+/*Termina fortat executie unui job*/
 static void actionKillJob(void){
     char inputBuffer[64];
     inputPrompt("Enter job ID to kill: ", inputBuffer, sizeof(inputBuffer));
@@ -325,6 +373,8 @@ static void actionKillJob(void){
     }
 }
 
+/**
+* Blocheaza sau deblocheaza o adresa IP */
 static void actionIPBlock(int block){
     char inputBuffer[48];
     inputPrompt("Enter IP address to block: ", inputBuffer, sizeof(inputBuffer));
@@ -363,6 +413,7 @@ static void actionIPBlock(int block){
     }
 }
 
+/*Realizeaza conexiunea la server prin UNIX socket*/
 static int connectToServer(const char* unixPath){
     int sock = socket(AF_UNIX, SOCK_STREAM, 0);
     if(sock < 0){
@@ -381,6 +432,7 @@ static int connectToServer(const char* unixPath){
     return sock;
 }
 
+/*Ruleaza interfata principala ncurses*/
 static void runUI(void){
     static const int NUM_MENU_ITEMS = 9;
     int selectedMenuItem = 0;
@@ -392,11 +444,14 @@ static void runUI(void){
 
     int running = 1;
     while(running){
+        /*Citeste tasta apasata*/
         int ch = wgetch(gMenuWin);
         switch(ch){
+            /*Navigare sus*/
             case KEY_UP:
                 selectedMenuItem = (selectedMenuItem > 0) ? (selectedMenuItem - 1) : (NUM_MENU_ITEMS - 1);
                 break;
+            /*Jos*/
             case KEY_DOWN:
                 selectedMenuItem = (selectedMenuItem < NUM_MENU_ITEMS - 1) ? (selectedMenuItem + 1) : 0;
                 break;
@@ -414,6 +469,7 @@ static void runUI(void){
                     case 8: actionIPBlock(0); break;
                 }
                 break;
+            /*Shortcut-uri rapide*/
             case '1':
                 selectedMenuItem = 0;
                 actionListClients();
@@ -450,6 +506,7 @@ static void runUI(void){
                 selectedMenuItem = 8;
                 actionIPBlock(0);
                 break;
+            /*Iesire aplicatie*/
             case 'q':
             case 'Q':
                 running = 0;

@@ -1,3 +1,11 @@
+/** 
+* Burbea Alexandru, Butka Razvan, Balean Kevin, Andrei Donea 
+* Client pentru comunicarea cu serverul PDF
+* Permite: -upload de fisiere PDF
+           -executie operatii PDF
+           -descarcare rezultate
+*/
+
 #define _POSIX_C_SOURCE 200809L
 
 #include <arpa/inet.h>
@@ -21,10 +29,11 @@
 
 #define DEFAULT_HOST "127.0.0.1"
 #define DEFAULT_PORT 18083
-#define STATUS_POLL_INTERVAL_MS 2000
-#define POLL_TIMEOUT_MS 30000
-#define MAX_POLL_RETRIES 60
+#define STATUS_POLL_INTERVAL_MS 2000 //Interval intre verificarile statusului jobului
+#define POLL_TIMEOUT_MS 30000 // Timeout pentru poll
+#define MAX_POLL_RETRIES 60 //Numar maxim de incercari pentru verificarea jobului
 
+/*Structura ce contine configuratie clientului*/
 typedef struct
 {
     char host[64];
@@ -37,6 +46,7 @@ typedef struct
     int verbose;
 } ClientConfig;
 
+/*Afiseaza variabilele de mediu relevante*/
 static void print_env_info(void)
 {
     const char *vars[] = {"HOME", "USER", "PDF_SERVER", "PDF_PORT", NULL};
@@ -49,6 +59,7 @@ static void print_env_info(void)
     (void)printf("------------------------------------\n\n");
 }
 
+//*Afiseaza modul de utilizare al programului
 static void usage(const char *prog)
 {
     (void)fprintf(stderr,
@@ -68,13 +79,15 @@ static void usage(const char *prog)
                   prog, DEFAULT_PORT, prog, prog);
 }
 
+/*Parseaza argumentele din linia de comanda */
 static int parse_args(int argc, char *argv[], ClientConfig *cfg)
 {
+    /*Seteaza valorile implicite*/
     (void)strncpy(cfg->host, DEFAULT_HOST, sizeof(cfg->host) - 1);
     cfg->port = DEFAULT_PORT;
     cfg->file_path[0] = '\0';
-    cfg->operation = OPR_PDF_OCR;
-    cfg->out_fmt = FMT_KEEP;
+    cfg->operation = OPR_PDF_OCR;// Operatia implicita = OCR
+    cfg->out_fmt = FMT_KEEP; //Format implicit = pastreaza originalul
     cfg->download_job_id = 0;
     cfg->watermark_text[0] = '\0';
     cfg->verbose = 0;
@@ -84,9 +97,11 @@ static int parse_args(int argc, char *argv[], ClientConfig *cfg)
     {
         switch (opt)
         {
+        /*Host server*/
         case 'h':
             (void)strncpy(cfg->host, optarg, sizeof(cfg->host) - 1);
             break;
+        /*Port server*/
         case 'p':
         {
             long p = strtol(optarg, NULL, 10);
@@ -98,10 +113,12 @@ static int parse_args(int argc, char *argv[], ClientConfig *cfg)
             cfg->port = (uint16_t)p;
             break;
         }
+        /*Fisier PDF*/
         case 'f':
             (void)strncpy(cfg->file_path, optarg,
                           sizeof(cfg->file_path) - 1);
             break;
+        /*Operatia selectata*/
         case 'o':
             if (strcmp(optarg, "ocr") == 0)
                 cfg->operation = OPR_PDF_OCR;
@@ -119,6 +136,7 @@ static int parse_args(int argc, char *argv[], ClientConfig *cfg)
                 return -1;
             }
             break;
+        /*Format iesire*/
         case 'F':
             if (strcmp(optarg, "keep") == 0)
                 cfg->out_fmt = FMT_KEEP;
@@ -138,10 +156,12 @@ static int parse_args(int argc, char *argv[], ClientConfig *cfg)
                 return -1;
             }
             break;
+        /*Text watermark*/
         case 'w':
             (void)strncpy(cfg->watermark_text, optarg,
                           sizeof(cfg->watermark_text) - 1);
             break;
+        /*Download direct dupa Job ID*/
         case 'd':
         {
             long jid = strtol(optarg, NULL, 10);
@@ -162,6 +182,7 @@ static int parse_args(int argc, char *argv[], ClientConfig *cfg)
         }
     }
 
+    /*Verificare daca exista fisier sau job id*/
     if (cfg->file_path[0] == '\0' && cfg->download_job_id == 0)
     {
         (void)fprintf(stderr,
@@ -173,6 +194,7 @@ static int parse_args(int argc, char *argv[], ClientConfig *cfg)
     return 0;
 }
 
+/*Realizeaza conexiunea TCP la server*/
 static int connect_to_server(const char *host, uint16_t port)
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -205,6 +227,9 @@ static int connect_to_server(const char *host, uint16_t port)
     return sock;
 }
 
+/**
+* Realizeaza upload-ul unui fisier PDF catre server
+ */
 static uint32_t do_upload(int sock, const ClientConfig *cfg,
                           uint32_t client_id)
 {
@@ -234,12 +259,15 @@ static uint32_t do_upload(int sock, const ClientConfig *cfg,
     start_msg.opType = htonl(cfg->operation);
     start_msg.outFmt = htonl(cfg->out_fmt);
     (void)memset(start_msg.opParam, 0, sizeof(start_msg.opParam));
+
+    /*Daca operatia este watermark, trimite si textul watermark-ului*/
     if (cfg->operation == OPR_PDF_WATERMARK && cfg->watermark_text[0] != '\0')
     {
         (void)strncpy(start_msg.opParam, cfg->watermark_text,
                       sizeof(start_msg.opParam) - 1);
     }
 
+    /*Trimite mesajul UPLOAD_START*/
     if (send_all(sock, &start_msg, sizeof(start_msg)) < 0)
     {
         (void)fprintf(stderr, "do_upload: trimitere UPLOAD_START esuata\n");
@@ -248,6 +276,7 @@ static uint32_t do_upload(int sock, const ClientConfig *cfg,
     (void)printf("[upload] Initiat: %s (%" PRIu64 " bytes)\n",
                  basename, file_size);
 
+    /*Primeste confirmarea serverului*/
     uploadAckmessageType ack;
     if (recv_all(sock, &ack, sizeof(ack)) < 0)
     {
@@ -262,6 +291,7 @@ static uint32_t do_upload(int sock, const ClientConfig *cfg,
                       status);
         return 0;
     }
+    /*Job ID prealocat*/
     uint32_t job_id = ntohl(ack.jobID);
     (void)printf("[upload] Server gata. Job ID preallocat: %u\n", job_id);
 
@@ -277,9 +307,13 @@ static uint32_t do_upload(int sock, const ClientConfig *cfg,
     uint64_t sent_bytes = 0;
     ssize_t bytes_read;
 
+    /* Citeste si trimite fisierul in bucati*/
     while ((bytes_read = read(fd, chunk_msg.data, CHUNK_SIZE)) > 0)
     {
+        /*Curata header-ul*/
         (void)memset(&chunk_msg.header, 0, sizeof(chunk_msg.header));
+
+        /*Dimensiunea totala a mesajului*/
         chunk_msg.header.messageSize =
             htonl((uint32_t)(sizeof(messageHeaderType) +
                              sizeof(uint32_t) + (uint32_t)bytes_read));
@@ -348,14 +382,19 @@ static uint32_t do_upload(int sock, const ClientConfig *cfg,
     return job_id;
 }
 
+/** Burbea Alexandru
+* Asteapta finalizarea unui job pe server
+* Functia trimite periodic cereri STATUS_REQ si verifica progresul jobului */
 static int wait_for_job_done(int sock, uint32_t job_id, uint32_t client_id)
 {
     struct pollfd pfd;
     pfd.fd = sock;
     pfd.events = POLLIN | POLLHUP | POLLERR;
 
+    /*Numarul maxim de incercari*/
     for (int attempt = 0; attempt < MAX_POLL_RETRIES; attempt++)
-    {
+    {   
+        /*Construieste cererea de status*/
         jobStatusReqType req;
         (void)memset(&req, 0, sizeof(req));
         req.header.messageSize = htonl((uint32_t)sizeof(req));
@@ -364,6 +403,7 @@ static int wait_for_job_done(int sock, uint32_t job_id, uint32_t client_id)
         req.header.statusCode = htonl(STATUS_OK);
         req.jobID = htonl(job_id);
 
+        /*Trimite cererea*/
         if (send_all(sock, &req, sizeof(req)) < 0)
         {
             (void)fprintf(stderr,
@@ -371,19 +411,21 @@ static int wait_for_job_done(int sock, uint32_t job_id, uint32_t client_id)
             return 0;
         }
 
+        /*Asteapta raspunsul serverului*/
         int ret = poll(&pfd, 1, STATUS_POLL_INTERVAL_MS);
         if (ret < 0)
         {
             perror("poll()");
             return 0;
         }
+        /*Timeout poll*/
         if (ret == 0)
         {
             (void)printf("[status] Job %u: asteptam... (%d/%d)\n",
                          job_id, attempt + 1, MAX_POLL_RETRIES);
             continue;
         }
-
+        /*Serverul s a inchis*/
         if (pfd.revents & (POLLHUP | POLLERR))
         {
             (void)fprintf(stderr, "[status] Serverul s-a deconectat.\n");
@@ -397,6 +439,7 @@ static int wait_for_job_done(int sock, uint32_t job_id, uint32_t client_id)
             return 0;
         }
 
+        /*Extrage statusul si progresul*/
         uint32_t js = ntohl(resp.jobStatus);
         uint32_t pr = ntohl(resp.progress);
 
@@ -420,6 +463,7 @@ static int wait_for_job_done(int sock, uint32_t job_id, uint32_t client_id)
             return 0;
         }
 
+        /*Asteapta inainte de urmatoarea verificare*/
         struct timespec ts = {STATUS_POLL_INTERVAL_MS / 1000,
                               (STATUS_POLL_INTERVAL_MS % 1000) * 1000000L};
         (void)nanosleep(&ts, NULL);
@@ -429,9 +473,14 @@ static int wait_for_job_done(int sock, uint32_t job_id, uint32_t client_id)
     return 0;
 }
 
+/**
+* Butka Razvan
+* Descarca rezultatul unui job procesat de server
+*/
 static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
                        uint32_t client_id)
-{
+{   
+    /*Construieste cererea de download*/
     downloadReqType req;
     (void)memset(&req, 0, sizeof(req));
     req.header.messageSize = htonl((uint32_t)sizeof(req));
@@ -441,6 +490,7 @@ static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
     req.jobID = htonl(job_id);
     req.outFmt = htonl(out_fmt);
 
+    /*Trimite cererea catre server*/
     if (send_all(sock, &req, sizeof(req)) < 0)
     {
         (void)fprintf(stderr, "[download] Eroare trimitere cerere.\n");
@@ -454,13 +504,16 @@ static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
         return -1;
     }
 
+    /*Extrage codul de status*/
     uint32_t status = ntohl(ack.header.statusCode);
+    /*Jobul inca ruleaza*/
     if (status == STATUS_JOB_PROCESSING || status == STATUS_JOB_PENDING)
     {
         (void)fprintf(stderr,
                       "[download] Job %u nu este finalizat inca.\n", job_id);
         return -1;
     }
+    /*Serverul trebuie sa confirme ca fisierul este pregatit*/
     if (status != STATUS_DOWNLOAD_READY)
     {
         (void)fprintf(stderr,
@@ -468,12 +521,14 @@ static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
         return -1;
     }
 
+    /*Reconstruieste dimensiunea fisierului*/
     uint64_t total_size = FSIZE_JOIN(ntohl(ack.fileSizeHigh),
                                      ntohl(ack.fileSizeLow));
     ack.fileName[sizeof(ack.fileName) - 1] = '\0';
     (void)printf("[download] Fisier: %s (%" PRIu64 " bytes)\n",
                  ack.fileName, total_size);
-
+    
+    /*Creeaza fisierul local*/
     int out_fd = open(ack.fileName,
                       O_WRONLY | O_CREAT | O_TRUNC,
                       S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -487,8 +542,10 @@ static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
     uint64_t received = 0;
     uploadChunkmessageType chunk;
 
+    /*Primeste datele pana la finalizarea transferului*/
     while (received < total_size)
-    {
+    {   
+        /*Primeste header-ul chunkului*/
         if (recv_all(sock, &chunk.header, sizeof(chunk.header)) < 0)
         {
             (void)fprintf(stderr, "[download] Eroare receptie antet bloc.\n");
@@ -496,6 +553,7 @@ static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
             return -1;
         }
 
+        /*Extrage tipul operatiei*/
         uint32_t op = ntohl(chunk.header.opID);
 
         if (op == OPR_DOWNLOAD_END)
@@ -526,6 +584,7 @@ static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
             return -1;
         }
 
+        /*Primeste datele efective*/
         if (recv_all(sock, chunk.data, chunk_len) < 0)
         {
             (void)fprintf(stderr, "[download] Eroare receptie date bloc.\n");
@@ -533,6 +592,7 @@ static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
             return -1;
         }
 
+        /*Scrie datele in fisier*/
         ssize_t wr = write(out_fd, chunk.data, chunk_len);
         if (wr < 0 || (size_t)wr != chunk_len)
         {
@@ -540,7 +600,7 @@ static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
             (void)close(out_fd);
             return -1;
         }
-        received += chunk_len;
+        received += chunk_len; //Actualizeaza progresul
         (void)printf("\r[download] %" PRIu64 " / %" PRIu64 " bytes (%.1f%%)",
                      received, total_size,
                      total_size > 0
