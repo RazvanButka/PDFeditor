@@ -25,6 +25,7 @@
 #include "proto.h"
 #include "pdf_ocr.h"
 #include "pdf_server.h"
+#include "gdpr_redact.h"
 
 static const char *g_configPathOverride = NULL;
 
@@ -502,48 +503,7 @@ static int sendHello(int sock, uint32_t clientId)
 
 static void redactSensitiveInPlace(char *text)
 {
-    if (text == NULL)
-    {
-        return;
-    }
-    for (char *p = text; *p != '\0'; p++)
-    {
-        if (*p == '@')
-        {
-            char *start = p;
-            while (*p != '\0' && *p != ' ' && *p != '\n')
-            {
-                p++;
-            }
-            size_t span = (size_t)(p - start);
-            if (span > 3)
-            {
-                (void)memset(start + 1, '*', span > 1 ? span - 2 : 0);
-            }
-            if (*p == '\0')
-            {
-                break;
-            }
-        }
-        else if (*p >= '0' && *p <= '9')
-        {
-            int digits = 0;
-            char *start = p;
-            while (*p >= '0' && *p <= '9')
-            {
-                digits++;
-                p++;
-            }
-            if (digits >= 10)
-            {
-                (void)memset(start, '*', (size_t)digits);
-            }
-            if (*p == '\0')
-            {
-                break;
-            }
-        }
-    }
+    gdpr_redact_in_place(text);
 }
 
 static char *extractAllPageText(fz_context *ctx, fz_document *doc, int pageCount)
@@ -1969,6 +1929,10 @@ static int pdf_server_startup(int port)
     if (ocr_init("ron+eng") < 0)
     {
         (void)fprintf(stderr, "[pdf] Avertisment: OCR dezactivat.\n");
+    }
+    if (gdpr_init() < 0)
+    {
+        (void)fprintf(stderr, "[pdf] Avertisment: GDPR redactor dezactivat.\n");
     }
 
     struct sigaction saChld;
