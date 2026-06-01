@@ -17,6 +17,9 @@ Programul de mai jos implementeaza recunoasterea caracterelor pentru documentele
 #include <mupdf/fitz.h>
 #include "pdf_ocr.h"
 
+
+#define MAX_CONCURRENT_OCR 4
+
 static TessBaseAPI *tess_api = NULL;
 
 typedef struct {
@@ -75,9 +78,9 @@ static fz_pixmap *render_page_pixmap(fz_context* context, fz_document* document,
     return pixmap;
 }
 
-char *ocr_extract_pageText(fz_context *context, fz_document *document, int pageNum, int dpi) { //Aici se transforma pagina PDF -> imagine si in text
+char *ocr_extract_page_text(fz_context *context, fz_document *document, int pageNum, int dpi) { //Aici se transforma pagina PDF -> imagine si in text
     if (tess_api == NULL) { 
-        (void)fprintf(stderr, "ocr_extract_pageText: OCR not initialized\n");
+        (void)fprintf(stderr, "ocr_extract_page_text: OCR not initialized\n");
         return NULL;
     }
     if (context == NULL || document == NULL) return NULL;
@@ -127,7 +130,7 @@ char *ocr_extract_all_text(fz_context *context, fz_document *document, int dpi) 
     accumulated[0] = '\0';
     
     for (int i = 0; i < pageCount; i++) { //procesam pagina cu pagina
-        char *pageText = ocr_extract_pageText(context, document, i, dpi);
+        char *pageText = ocr_extract_page_text(context, document, i, dpi);
         if (!pageText) continue;
         
         size_t textLength = strlen(pageText);
@@ -153,7 +156,12 @@ char *ocr_extract_all_text(fz_context *context, fz_document *document, int dpi) 
     return accumulated;
 }
 
-char* ocr_extract_all_text_parallel(const char* pdfPath, int dpi, int nrPages) { //Aceasta este varianta paralela a functiei de mai sus
+char* ocr_extract_all_text_parallel(const char* pdfPath, int dpi, int nrPages) {
+    /* Varianta paralela cu limitare a concurentei.
+     * Foloseste batch processing: lanseaza maxim MAX_CONCURRENT_OCR procese
+     * concomitent, asteapta sa termine, apoi trece la urmatorul batch.
+     * Asigura consum RAM limitat indiferent de numarul de pagini. */
+
     if (pdfPath == NULL || pdfPath[0] == '\0' || nrPages <= 0) {
         return NULL;
     }
@@ -164,145 +172,159 @@ char* ocr_extract_all_text_parallel(const char* pdfPath, int dpi, int nrPages) {
         return NULL;
     }
 
+    /* Initializare: toate intrarile sunt invalide pana cand fork-ul reuseste */
     for (int i = 0; i < nrPages; i++) {
-        int pfd[2];
-        if (pipe(pfd) < 0) {
-            (void)fprintf(stderr, "ocr_extract_all_text_parallel: pipe() failed page %d: %s\n", i, strerror(errno));
-            pipes[i].pipeReadFileDescriptor = -1;
-            pipes[i].childProcessID = -1;
-            pipes[i].pageIndex = i;
-            continue;
-        }
-
-        pid_t pid = fork();
-        if (pid < 0) {
-            (void)fprintf(stderr, "ocr_extract_all_text_parallel: fork() failed page %d: %s\n", i, strerror(errno));
-            close(pfd[0]);
-            close(pfd[1]);
-            pipes[i].pipeReadFileDescriptor = -1;
-            pipes[i].childProcessID = -1;
-            pipes[i].pageIndex = i;
-            continue;
-        }
-
-        if (pid == 0) { /* Proces copil */
-            close(pfd[0]); /* copilul nu citeste */
-
-            fz_context *childContext = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
-            fz_document *childDocument = NULL;
-            char *text = NULL;
-
-            if(childContext != NULL){
-                fz_try(childContext){
-                    fz_register_document_handlers(childContext);
-                } fz_catch(childContext){
-                    fz_drop_context(childContext);
-                    childContext = NULL;
-                }
-            }
-            if(childContext != NULL){
-                fz_try(childContext){
-                    childDocument = fz_open_document(childContext, pdfPath);
-                } fz_catch(childContext){
-                    childDocument = NULL;
-                }
-            }
-            if(childContext != NULL && childDocument != NULL){
-                 tess_api = NULL;
-                 if(ocr_init("ron+eng") == 0){
-                    text = ocr_extract_pageText(childContext, childDocument, i, dpi);
-                    ocr_cleanup();
-                 }
-             }
-            if(childDocument != NULL){
-                fz_drop_document(childContext, childDocument);
-            }
-            if(childContext != NULL){
-                fz_drop_context(childContext);
-            }
-
-             /* Scriem lungimea + textul in pipe. */
-             if (text != NULL) {
-                size_t len = strlen(text);
-                if (write(pfd[1], &len, sizeof(size_t)) < 0 || write(pfd[1], text, len) < 0) 
-                    (void)fprintf(stderr, "copil pagina %d: write pipe failed\n", i);
-                free(text);
-             } else {
-                size_t zero = 0;
-                (void)write(pfd[1], &zero, sizeof(size_t));
-             }
-             (void)close(pfd[1]);
-             _exit(EXIT_SUCCESS);
-        }
-        (void)close(pfd[1]); /* parinte nu scrie */
-        pipes[i].pipeReadFileDescriptor = pfd[0];
-        pipes[i].childProcessID = pid;
+        pipes[i].pipeReadFileDescriptor = -1;
+        pipes[i].childProcessID = -1;
         pipes[i].pageIndex = i;
     }
 
     size_t capacity = 8192;
     size_t total_size = 0;
     char *result = malloc(capacity);
-    if (result == NULL)    {
+    if (result == NULL) {
         (void)fprintf(stderr, "ocr_extract_all_text_parallel: malloc result failed\n");
         free(pipes);
         return NULL;
     }
     result[0] = '\0';
 
-    for (int i = 0; i < nrPages; i++){
-        char *page_text = NULL;
-        size_t page_len = 0;
+    /* Procesare in batch-uri de MAX_CONCURRENT_OCR pagini */
+    for (int batchStart = 0; batchStart < nrPages; batchStart += MAX_CONCURRENT_OCR) {
+        int batchEnd = batchStart + MAX_CONCURRENT_OCR;
+        if (batchEnd > nrPages) batchEnd = nrPages;
 
-        if (pipes[i].pipeReadFileDescriptor >= 0){
-            ssize_t r = read(pipes[i].pipeReadFileDescriptor, &page_len, sizeof(size_t));
-            if(r == (ssize_t)sizeof(size_t) && page_len > 0){
-                page_text = malloc(page_len + 1);
-                if (page_text != NULL){
-                    ssize_t total_read = 0;
-                    while ((size_t)total_read < page_len){
-                        ssize_t n = read(pipes[i].pipeReadFileDescriptor, page_text + total_read,
-                                         page_len - (size_t)total_read);
-                        if (n <= 0)
-                            break;
-                        total_read += n;
+        (void)fprintf(stderr, "[ocr-parallel] Batch pagini %d-%d (din %d total)\n",
+                      batchStart + 1, batchEnd, nrPages);
+
+        /* === Faza 1: Lanseaza fork-urile pentru paginile din batch === */
+        for (int i = batchStart; i < batchEnd; i++) {
+            int pfd[2];
+            if (pipe(pfd) < 0) {
+                (void)fprintf(stderr, "ocr_extract_all_text_parallel: pipe() failed page %d: %s\n",
+                              i, strerror(errno));
+                continue;
+            }
+
+            pid_t pid = fork();
+            if (pid < 0) {
+                (void)fprintf(stderr, "ocr_extract_all_text_parallel: fork() failed page %d: %s\n",
+                              i, strerror(errno));
+                close(pfd[0]);
+                close(pfd[1]);
+                continue;
+            }
+
+            if (pid == 0) { /* Proces copil */
+                close(pfd[0]); /* copilul nu citeste */
+
+                fz_context *childContext = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
+                fz_document *childDocument = NULL;
+                char *text = NULL;
+
+                if(childContext != NULL){
+                    fz_try(childContext){
+                        fz_register_document_handlers(childContext);
+                    } fz_catch(childContext){
+                        fz_drop_context(childContext);
+                        childContext = NULL;
                     }
-                    page_text[page_len] = '\0';
                 }
+                if(childContext != NULL){
+                    fz_try(childContext){
+                        childDocument = fz_open_document(childContext, pdfPath);
+                    } fz_catch(childContext){
+                        childDocument = NULL;
+                    }
+                }
+                if(childContext != NULL && childDocument != NULL){
+                     tess_api = NULL;
+                     if(ocr_init("ron+eng") == 0){
+                        text = ocr_extract_page_text(childContext, childDocument, i, dpi);
+                        ocr_cleanup();
+                     }
+                 }
+                if(childDocument != NULL){
+                    fz_drop_document(childContext, childDocument);
+                }
+                if(childContext != NULL){
+                    fz_drop_context(childContext);
+                }
+
+                 /* Scriem lungimea + textul in pipe. */
+                 if (text != NULL) {
+                    size_t len = strlen(text);
+                    if (write(pfd[1], &len, sizeof(size_t)) < 0 || write(pfd[1], text, len) < 0) 
+                        (void)fprintf(stderr, "copil pagina %d: write pipe failed\n", i);
+                    free(text);
+                 } else {
+                    size_t zero = 0;
+                    (void)write(pfd[1], &zero, sizeof(size_t));
+                 }
+                 (void)close(pfd[1]);
+                 _exit(EXIT_SUCCESS);
             }
-            (void)close(pipes[i].pipeReadFileDescriptor);
+            (void)close(pfd[1]); /* parinte nu scrie */
+            pipes[i].pipeReadFileDescriptor = pfd[0];
+            pipes[i].childProcessID = pid;
         }
 
-        if (pipes[i].childProcessID > 0){
-            int wstatus;
-            (void)waitpid(pipes[i].childProcessID, &wstatus, 0);
-        }
+        /* === Faza 2: Colecteaza rezultatele copiilor din batch (blocheaza pana toti termina) === */
+        for (int i = batchStart; i < batchEnd; i++){
+            char *page_text = NULL;
+            size_t page_len = 0;
 
-        const char *content = (page_text != NULL) ? page_text : "[OCR esuat pentru aceasta pagina]";
-
-        size_t content_len = strlen(content);
-        size_t needed = total_size + content_len + 64;
-
-        while (needed >= capacity)
-        {
-            capacity *= 2;
-            char *tmp = realloc(result, capacity);
-            if (tmp == NULL){
-                (void)fprintf(stderr, "ocr_extract_all_text_parallel: realloc failed\n");
-                free(page_text);
-                free(result);
-                free(pipes);
-                return NULL;
+            if (pipes[i].pipeReadFileDescriptor >= 0){
+                ssize_t r = read(pipes[i].pipeReadFileDescriptor, &page_len, sizeof(size_t));
+                if(r == (ssize_t)sizeof(size_t) && page_len > 0){
+                    page_text = malloc(page_len + 1);
+                    if (page_text != NULL){
+                        ssize_t total_read = 0;
+                        while ((size_t)total_read < page_len){
+                            ssize_t n = read(pipes[i].pipeReadFileDescriptor, page_text + total_read,
+                                             page_len - (size_t)total_read);
+                            if (n <= 0)
+                                break;
+                            total_read += n;
+                        }
+                        page_text[page_len] = '\0';
+                    }
+                }
+                (void)close(pipes[i].pipeReadFileDescriptor);
             }
-            result = tmp;
+
+            if (pipes[i].childProcessID > 0){
+                int wstatus;
+                (void)waitpid(pipes[i].childProcessID, &wstatus, 0);
+            }
+
+            const char *content = (page_text != NULL) ? page_text : "[OCR esuat pentru aceasta pagina]";
+
+            size_t content_len = strlen(content);
+            size_t needed = total_size + content_len + 64;
+
+            while (needed >= capacity)
+            {
+                capacity *= 2;
+                char *tmp = realloc(result, capacity);
+                if (tmp == NULL){
+                    (void)fprintf(stderr, "ocr_extract_all_text_parallel: realloc failed\n");
+                    free(page_text);
+                    free(result);
+                    free(pipes);
+                    return NULL;
+                }
+                result = tmp;
+            }
+
+            int written = snprintf(result + total_size, capacity - total_size, "\n=== Page %d ===\n%s",
+                                   i + 1, content);
+            if (written > 0)
+                total_size += (size_t)written;
+
+            free(page_text);
         }
-
-        int written = snprintf(result + total_size, capacity - total_size, "\n=== Page %d ===\n%s",
-                               i + 1, content);
-        if (written > 0)
-            total_size += (size_t)written;
-
-        free(page_text);
+        /* Toti copiii batch-ului au fost colectati. Putem trece la urmatorul. */
     }
 
     free(pipes);
@@ -332,4 +354,3 @@ int ocr_page_to_png(fz_context *context, fz_document *document, int pageNum, int
     fz_drop_pixmap(context, pixmap);
     return rc;
 }
-            
