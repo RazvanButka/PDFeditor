@@ -86,7 +86,7 @@ BIN_DIR    := bin
 SRC_MAIN   := src/main/threeds.c
 SRC_SERVER := src/server/unixds.c src/server/inetds.c src/server/soapds.c \
               src/server/pdfds.c
-SRC_CORE   := src/core/proto.c src/core/proto_inet.c src/core/pdf_ocr.c src/core/gdpr_redact.c
+SRC_CORE   := src/core/proto.c src/core/proto_inet.c src/core/pdf_ocr.c src/core/gdpr_redact.c src/core/pandoc_convert.c
 SRC_CLIENT := src/client/pdfclient.c src/client/pdfadmin.c src/client/inetsample.c
  
 SOAP_GEN   := $(SOAP_DIR)/soapC.c $(SOAP_DIR)/soapServer.c \
@@ -97,7 +97,7 @@ SOAP_GEN   := $(SOAP_DIR)/soapC.c $(SOAP_DIR)/soapServer.c \
 OBJ_MAIN   := $(OBJ_DIR)/threeds.o
 OBJ_SERVER := $(OBJ_DIR)/unixds.o $(OBJ_DIR)/inetds.o $(OBJ_DIR)/soapds.o \
               $(OBJ_DIR)/pdfds.o
-OBJ_CORE   := $(OBJ_DIR)/proto.o $(OBJ_DIR)/proto_inet.o $(OBJ_DIR)/pdf_ocr.o $(OBJ_DIR)/gdpr_redact.o
+OBJ_CORE   := $(OBJ_DIR)/proto.o $(OBJ_DIR)/proto_inet.o $(OBJ_DIR)/pdf_ocr.o $(OBJ_DIR)/gdpr_redact.o $(OBJ_DIR)/pandoc_convert.o
 
 OBJ_SOAP   := $(OBJ_DIR)/soapC.o $(OBJ_DIR)/soapServer.o
  

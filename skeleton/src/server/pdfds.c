@@ -26,6 +26,7 @@
 #include "pdf_ocr.h"
 #include "pdf_server.h"
 #include "gdpr_redact.h"
+#include "pandoc_convert.h"
 
 static const char *g_configPathOverride = NULL;
 
@@ -1015,14 +1016,9 @@ static void handleDownloadReq(int sock, uint32_t clientId,
                        "%s/result_%u.%s",
                        gConfig.outgoingDir, jobId, ext);
 
-        char cmd[1024];
-        (void)snprintf(cmd, sizeof(cmd),
-                       "pandoc -f plain -t %s -o \"%s\" \"%s\" 2>/dev/null",
-                       ext, convertedPath, job->outPath);
-        if (system(cmd) == 0)
+        if (pandoc_convert(job->outPath, convertedPath,"markdown", ext, 30) == 0)
         {
-            (void)strncpy(finalPath, convertedPath,
-                          sizeof(finalPath) - 1);
+            (void)strncpy(finalPath, convertedPath,sizeof(finalPath) - 1);
         }
     }
 
