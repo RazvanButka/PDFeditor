@@ -150,6 +150,8 @@ static int parse_args(int argc, char *argv[], ClientConfig *cfg)
                 cfg->out_fmt = FMT_MD;
             else if (strcmp(optarg, "rtf") == 0)
                 cfg->out_fmt = FMT_RTF;
+            else if (strcmp(optarg, "pdf") == 0)
+                cfg->out_fmt = FMT_PDF;
             else
             {
                 (void)fprintf(stderr, "Format necunoscut: %s\n", optarg);

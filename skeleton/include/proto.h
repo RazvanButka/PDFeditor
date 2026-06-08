@@ -88,6 +88,7 @@ typedef enum{
   FMT_HTML = 3,
   FMT_MD = 4,
   FMT_RTF = 5,
+  FMT_PDF = 6,
 }OutputFormat;
 
 /**

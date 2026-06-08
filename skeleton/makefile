@@ -9,11 +9,9 @@
 CC     := gcc
 UNAME  := $(shell uname -s)
  
-# --- platforma: un singur loc pentru diferente OS ---
  
 MUPDF_LIBS_EXPLICIT := -lmupdf -lmupdf-third \
   -lfreetype -lharfbuzz -lgumbo -lz -lm -ljpeg -lopenjp2 -ljbig2dec
-# Debian/Ubuntu: libmupdf.a + libmupdf-third.a (static) — vezi apt MUPDF_APT_DEPS
 MUPDF_LIBS_LINUX  := -lmupdf -lmupdf-third -lfreetype -lharfbuzz -lgumbo -lz \
                        -ljpeg -lopenjp2 -ljbig2dec -lmujs
 MUPDF_APT_DEPS    := zlib1g-dev libjpeg-dev libopenjp2-7-dev libjbig2dec-dev \
@@ -206,6 +204,7 @@ help:
 	@echo "Linux (Ubuntu/Debian):"
 	@echo "  sudo apt install build-essential gsoap libgsoap-dev libconfig-dev \\"
 	@echo "    libmupdf-dev libtesseract-dev libleptonica-dev libncurses-dev pkg-config \\"
+	@echo "    libpcre2-dev pandoc texlive-latex-recommended texlive-latex-extra \\"
 	@echo "    $(MUPDF_APT_DEPS)"
 	@echo "  make linux-first"
 	@echo ""

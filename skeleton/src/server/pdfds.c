@@ -1007,6 +1007,9 @@ static void handleDownloadReq(int sock, uint32_t clientId,
         case FMT_RTF:
             ext = "rtf";
             break;
+        case FMT_PDF:
+            ext = "pdf";
+            break;
         default:
             ext = "txt";
             break;
@@ -1016,7 +1019,9 @@ static void handleDownloadReq(int sock, uint32_t clientId,
                        "%s/result_%u.%s",
                        gConfig.outgoingDir, jobId, ext);
 
-        if (pandoc_convert(job->outPath, convertedPath,"markdown", ext, 30) == 0)
+        if (pandoc_convert_with_watermark(job->outPath, convertedPath,
+                                          "markdown", ext,
+                                          job->opParam, 30) == 0)
         {
             (void)strncpy(finalPath, convertedPath,sizeof(finalPath) - 1);
         }
