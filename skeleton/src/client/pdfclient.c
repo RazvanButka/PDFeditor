@@ -263,7 +263,7 @@ static uint32_t do_upload(int sock, const ClientConfig *cfg,
     (void)memset(start_msg.opParam, 0, sizeof(start_msg.opParam));
 
     /*Daca operatia este watermark, trimite si textul watermark-ului*/
-    if (cfg->operation == OPR_PDF_WATERMARK && cfg->watermark_text[0] != '\0')
+    if (cfg->watermark_text[0] != '\0')
     {
         (void)strncpy(start_msg.opParam, cfg->watermark_text,
                       sizeof(start_msg.opParam) - 1);
@@ -479,6 +479,23 @@ static int wait_for_job_done(int sock, uint32_t job_id, uint32_t client_id)
 * Butka Razvan
 * Descarca rezultatul unui job procesat de server
 */
+/* Returneaza extensia de fisier corespunzatoare formatului de iesire.
+ * Folosita la salvarea locala a fisierului descarcat pentru a-i pune extensia
+ * corecta (ex: .pdf, .docx) astfel incat sa fie recunoscut de sistemul de
+ * operare la deschidere. */
+static const char *getExtensionFromFmt(uint32_t outFmt)
+{
+    switch (outFmt) {
+        case FMT_DOCX: return ".docx";
+        case FMT_HTML: return ".html";
+        case FMT_MD:   return ".md";
+        case FMT_RTF:  return ".rtf";
+        case FMT_PDF:  return ".pdf";
+        default:       return ".txt";  /* FMT_KEEP, FMT_TXT */
+    }
+}
+
+
 static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
                        uint32_t client_id)
 {   
@@ -527,17 +544,23 @@ static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
     uint64_t total_size = FSIZE_JOIN(ntohl(ack.fileSizeHigh),
                                      ntohl(ack.fileSizeLow));
     ack.fileName[sizeof(ack.fileName) - 1] = '\0';
+
+    /* Construieste numele local cu extensia corecta (result_1.pdf, etc) */
+    char localFileName[300];
+    (void)snprintf(localFileName, sizeof(localFileName), "%s%s",
+                   ack.fileName, getExtensionFromFmt(out_fmt));
+
     (void)printf("[download] Fisier: %s (%" PRIu64 " bytes)\n",
-                 ack.fileName, total_size);
-    
+                 localFileName, total_size);
+
     /*Creeaza fisierul local*/
-    int out_fd = open(ack.fileName,
+    int out_fd = open(localFileName,
                       O_WRONLY | O_CREAT | O_TRUNC,
                       S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (out_fd < 0)
     {
         (void)fprintf(stderr, "open(%s) local: %s\n",
-                      ack.fileName, strerror(errno));
+                      localFileName, strerror(errno));
         return -1;
     }
 
@@ -612,7 +635,7 @@ static int do_download(int sock, uint32_t job_id, uint32_t out_fmt,
     }
 
     (void)close(out_fd);
-    (void)printf("\n[download] Complet → %s\n", ack.fileName);
+    (void)printf("\n[download] Complet → %s\n", localFileName);
     return 0;
 }
 
