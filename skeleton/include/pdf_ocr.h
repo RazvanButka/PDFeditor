@@ -1,5 +1,5 @@
 /**
-Bǎlean Kevin-Lucian
+Bǎlean Kevin-Lucian, Donea Anrei
 IR3 2026, subgrupa 2
 
 Header pentru modului OCR
