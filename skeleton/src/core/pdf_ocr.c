@@ -1,5 +1,5 @@
 /**
-Bǎlean Kevin-Lucian
+Bǎlean Kevin-Lucian, Donea Andrei
 IR3 2026, subgrupa 2
 Programul de mai jos implementeaza recunoasterea caracterelor pentru documentele PDF cu ajutorul integrarii:
 * MuPDF care randeaza paginile unui PDF in imagini
